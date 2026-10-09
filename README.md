@@ -190,6 +190,7 @@ Each framework-free example has a Node build script that writes standalone pages
 | [`raptor-engine`](examples/raptor-engine) | A Raptor 2 engine in a test stand. It comes apart into 11 assemblies, and a WebGL plume, shock, splash and steam render between the back and front SVG. The reference for dense pipework, smooth shading, fades and the audit. The build takes a few minutes. | `node examples/raptor-engine/build.mjs` |
 | [`ripple-tank`](examples/ripple-tank) | A school ripple tank on tall legs over a paper screen, seen from 44° up. Two WebGL layers are registered to the isometric planes and driven by a pure model in `model.mjs`. | `node examples/ripple-tank/build.mjs` |
 | [`test-rig`](examples/test-rig) | A production figure from a React/Next.js site: a glass button on a spring-mounted carriage, a finger probe on a rail, and a dial gauge reading the lean. 53 solids. No build script: copy it into a React app. | none |
+| [`spot-plate`](examples/spot-plate) | A second figure from the same site: six pairs of glass drops on a spot plate that run together into one piece of glass as a fan of feeler blades opens. Each pair is drawn from one distance field. No build script: copy it into a React app. | none |
 | [`turning-dial`](examples/turning-dial) | The 3D mode: a combination dial that turns in true 3D with a small robot hand on it, a three-hinge finger that lifts, and a pod that breaks off as a free body. `stress.mjs` is a 380-part hand in a cluttered workshop, used to measure performance. | `node examples/turning-dial/build.mjs` |
 
 `node examples/raptor-engine/build.mjs --audit` and `node examples/turning-dial/build.mjs --light --audit` also run the geometry audit. The 3D audit is slow; see [`references/3d.md`](references/3d.md).
@@ -233,7 +234,7 @@ anatomy/
 │   ├── inline-kit.mjs        the kit as source, to inline into a standalone page
 │   ├── turn-check.mjs        3D checks in the browser (with turn-fidelity.mjs)
 │   └── turn-bench.mjs        3D timing in Node
-├── examples/                 six complete figures, built pages committed
+├── examples/                 seven complete figures, built pages committed
 ├── evals/evals.json          test prompts and what a good answer contains
 └── .github/                  issue forms, PR template, CI, README images
 ```
@@ -247,7 +248,7 @@ anatomy/
 | **[Claude Code](https://code.claude.com/docs/en/overview)** | everything | The skill is written for it. |
 | **Node.js 20.10+** | builds, kit, checks | Built-in modules only: nothing to `npm install`. The examples were rebuilt byte for byte on Node 20.19 and 22.11. On Node 20 the browser scripts restart themselves with `--experimental-websocket`. |
 | **Chrome or Chromium** | the checks | `capture.mjs`, `drive.mjs`, `lines.mjs` and `turn-check.mjs` look in the usual places on macOS, Linux and Windows and in Playwright's cache. Set `CHROME_PATH` for any other binary. They run it headless with WebGL on. |
-| **React 18+** | React output only | `kit/react/` and `examples/test-rig/`. |
+| **React 18+** | React output only | `kit/react/`, `examples/test-rig/` and `examples/spot-plate/`. |
 
 ## Limits
 

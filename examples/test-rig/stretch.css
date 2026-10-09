@@ -9,6 +9,11 @@
   user-select: none;
 }
 
+.iso[data-theme="light"] .ms {
+  --ms-glass-top: #fefefd;
+  --ms-glass-lit-top: #fffffe;
+}
+
 .ms[data-held] {
   cursor: grabbing;
 }
