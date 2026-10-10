@@ -35,6 +35,11 @@ jobs:
           node examples/desk-computer/build.mjs
           node examples/desk-computer/build.mjs --light
 
+      - name: Arcade cabinet
+        run: |
+          node examples/arcade-cabinet/build.mjs
+          node examples/arcade-cabinet/build.mjs --light
+
       - name: Ripple tank
         run: |
           node examples/ripple-tank/build.mjs
