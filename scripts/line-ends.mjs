@@ -5,7 +5,7 @@ function lineEnds({ select = null, tolerance = 1, root: rootSlack = 2, mark = 7,
   style.textContent = `${select || ".iso-plate"} *{pointer-events:none!important}${select || ".iso-plate"} svg,${select || ".iso-plate"} svg *{pointer-events:visiblePainted!important}`;
   document.head.append(style);
   const skipClass = ["iso-edge", "iso-bevel", "iso-crease", "tb-edge"];
-  const svgs = [...plate.querySelectorAll("svg")];
+  const svgs = [...(plate.matches("svg") ? [plate] : []), ...plate.querySelectorAll("svg")];
   const shapes = svgs.flatMap((svg) => [...svg.querySelectorAll("path, line, polyline, polygon, circle, ellipse, rect")]).filter((el) => !el.closest("defs, clipPath, mask, pattern, marker, symbol"));
   const opacityOf = (el) => {
     let alpha = 1;
