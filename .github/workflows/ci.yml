@@ -57,6 +57,9 @@ jobs:
           node examples/raptor-engine/build.mjs
           node examples/raptor-engine/build.mjs --light
 
+      - name: Sliding solid clearance regressions
+        run: node --test scripts/audit-slide-clearance.test.mjs
+
       - name: Committed pages are unchanged
         run: |
           git status --short

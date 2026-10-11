@@ -1563,7 +1563,13 @@ export function selfOverlaps(items, P, { entries: given = null, fold = 0.25, lea
 }
 
 export function solidClearances(solids, { state, sunk = 0.5, spacing = 0.6, cell = 4 } = {}) {
-  const list = solids.filter((shape) => shape.kind !== "tube").map((shape) => (shape.slide && state !== undefined && shape.move ? { ...moved(shape, offsetOf(shape, state)), move: undefined } : shape));
+  const stretched = new Set();
+  const list = solids.filter((shape) => shape.kind !== "tube").map((shape) => {
+    if (!(shape.slide && state !== undefined && shape.move)) return shape;
+    const next = { ...moved(shape, offsetOf(shape, state)), move: undefined };
+    if (next.slide.to !== shape.slide.to) stretched.add(next);
+    return next;
+  });
   if (!solidClearances.cache) solidClearances.cache = new WeakMap();
   const cache = solidClearances.cache;
   const gridOf = (shape) => {
@@ -1601,7 +1607,7 @@ export function solidClearances(solids, { state, sunk = 0.5, spacing = 0.6, cell
   for (let a = 0; a < list.length; a++)
     for (let b = a + 1; b < list.length; b++) {
       const rel = sub3(offsets[a], offsets[b]);
-      if (Math.abs(rel[0]) + Math.abs(rel[1]) + Math.abs(rel[2]) < 1e-6) continue;
+      if (Math.abs(rel[0]) + Math.abs(rel[1]) + Math.abs(rel[2]) < 1e-6 && !stretched.has(list[a]) && !stretched.has(list[b])) continue;
       const box = { min: [0, 1, 2].map((i) => Math.max(bounds[a].min[i] + rel[i], bounds[b].min[i])), max: [0, 1, 2].map((i) => Math.min(bounds[a].max[i] + rel[i], bounds[b].max[i])) };
       if (box.min.some((v, i) => v > box.max[i] - sunk)) continue;
       if (seatedOn(list[a], list[b]) || seatedOn(list[b], list[a])) continue;
