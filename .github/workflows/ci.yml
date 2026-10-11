@@ -25,6 +25,9 @@ jobs:
         with:
           node-version: 22
 
+      - name: Tapered audit regressions
+        run: node --test scripts/audit-taper.test.mjs
+
       - name: Dial indicator
         run: |
           node examples/dial-indicator/build.mjs
