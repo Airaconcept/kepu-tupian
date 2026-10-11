@@ -37,6 +37,8 @@ jobs:
         run: node --test scripts/chrome-startup.test.mjs
       - name: Round line root regressions
         run: node --test scripts/lines-round.test.mjs
+      - name: Arc line root regressions
+        run: node --test scripts/lines-arcs.test.mjs
 
       - name: Dial indicator
         run: |

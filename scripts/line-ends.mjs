@@ -95,7 +95,16 @@ function lineEnds({ select = null, tolerance = 1, root: rootSlack = 2, mark = 7,
           const reflected = control ? [2 * x - control[0], 2 * y - control[1]] : [x, y];
           quad(reflected[0], reflected[1], v[i] + ox(), v[i + 1] + oy());
         }
-      else if (C === "A") for (let i = 0; i + 6 < v.length; i += 7) push(v[i + 5] + ox(), v[i + 6] + oy());
+      else if (C === "A") {
+        const arc = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        arc.setAttribute("d", `M${x} ${y}${command}${args}`);
+        const length = arc.getTotalLength();
+        const count = Math.max(8, Math.ceil(length / 2));
+        for (let index = 1; index <= count; index++) {
+          const point = arc.getPointAtLength(length * index / count);
+          push(point.x, point.y);
+        }
+      }
       if (C !== "C" && C !== "S" && C !== "Q" && C !== "T") control = null;
     }
     return out;
