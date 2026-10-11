@@ -25,6 +25,9 @@ jobs:
         with:
           node-version: 22
 
+      - name: Navigation regressions
+        run: node --test scripts/navigation.test.mjs
+
       - name: Dial indicator
         run: |
           node examples/dial-indicator/build.mjs
