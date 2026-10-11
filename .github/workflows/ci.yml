@@ -25,6 +25,9 @@ jobs:
         with:
           node-version: 22
 
+      - name: Orbit sampling regressions
+        run: node --test scripts/orbit-sampling.test.mjs
+
       - name: Dial indicator
         run: |
           node examples/dial-indicator/build.mjs

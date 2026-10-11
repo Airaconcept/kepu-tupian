@@ -12,6 +12,8 @@ All notable changes to Anatomy are recorded here. The format follows [Keep a Cha
 
 ### Fixed
 
+- Orbit checks reject invalid sampling steps and empty pose lists before a zero-state sweep can pass.
+
 - `examples/test-rig/` drew its glass button dark in the light theme. `stretch.css` now has light values for its own colours.
 
 ### Changed
