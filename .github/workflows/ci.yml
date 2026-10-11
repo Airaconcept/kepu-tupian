@@ -57,6 +57,9 @@ jobs:
           node examples/raptor-engine/build.mjs
           node examples/raptor-engine/build.mjs --light
 
+      - name: Tube silhouette coverage regressions
+        run: node --test scripts/fidelity-tube-coverage.test.mjs
+
       - name: Committed pages are unchanged
         run: |
           git status --short

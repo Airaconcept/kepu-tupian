@@ -349,7 +349,9 @@ const subpaths = (d) => [...(d ?? "").matchAll(/M([^M]*)/g)].map(([, body]) => {
     let worst = 0;
     for (let i = 0; i < A.length; i++) {
       if (A[i].length === B[i].length) for (let j = 0; j < A[i].length; j++) worst = Math.max(worst, Math.abs(A[i][j][0] - B[i][j][0]), Math.abs(A[i][j][1] - B[i][j][1]));
-      else for (const p of A[i]) worst = Math.max(worst, Math.min(...B[i].slice(1).map((q, j) => segDist(p, B[i][j], q))));
+      else {
+        for (const [from, to] of [[A[i], B[i]], [B[i], A[i]]]) for (const p of from) worst = Math.max(worst, Math.min(...to.slice(1).map((q, j) => segDist(p, to[j], q))));
+      }
     }
     return { error: worst };
   };
