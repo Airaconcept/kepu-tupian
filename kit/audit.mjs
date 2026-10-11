@@ -1386,6 +1386,8 @@ function pointsOfShape(tag, attrs) {
     const out = [];
     let x = 0;
     let y = 0;
+    let sx = 0;
+    let sy = 0;
     for (const [, command, args] of d.matchAll(/([MmLlHhVvCcSsQqTtAaZz])([^MmLlHhVvCcSsQqTtAaZz]*)/g)) {
       const v = (args.match(NUMBER) ?? []).map(Number);
       const rel = command === command.toLowerCase();
@@ -1398,11 +1400,18 @@ function pointsOfShape(tag, attrs) {
       if (C === "H") for (const value of v) [x] = take([value + (rel ? x : 0), y]);
       else if (C === "V") for (const value of v) [, y] = take([x, value + (rel ? y : 0)]);
       else if (C === "A") for (let i = 0; i + 6 < v.length; i += 7) [x, y] = take([v[i + 5] + (rel ? x : 0), v[i + 6] + (rel ? y : 0)]);
-      else if (C !== "Z") {
+      else if (C === "Z") {
+        x = sx;
+        y = sy;
+      } else {
         const width = C === "C" ? 6 : C === "S" || C === "Q" ? 4 : 2;
         for (let i = 0; i + 1 < v.length; i += width) {
           for (let j = 0; j < width; j += 2) out.push(pair(i + j));
           [x, y] = pair(i + width - 2);
+          if (C === "M" && i === 0) {
+            sx = x;
+            sy = y;
+          }
         }
       }
     }

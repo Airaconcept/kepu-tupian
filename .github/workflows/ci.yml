@@ -25,6 +25,9 @@ jobs:
         with:
           node-version: 22
 
+      - name: Closed path audit regressions
+        run: node --test scripts/audit-path-origin.test.mjs
+
       - name: Dial indicator
         run: |
           node examples/dial-indicator/build.mjs
