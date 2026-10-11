@@ -152,6 +152,32 @@ mkdir -p ~/.config/opencode/skills/anatomy && curl -L https://github.com/wheresr
 
 Claude Code picks up new skills in a running session. If the `skills` folder itself did not exist when the session started, run `/reload-skills`. OpenCode lists it as `/anatomy` in its TUI; restart OpenCode if it does not show. Codex lists it under `/skills` and runs it with `$anatomy`; restart Codex if it does not show.
 
+<details>
+<summary><b>Codex: if the browser checks are blocked</b></summary>
+
+<br>
+
+The skill checks its own figures by starting headless Chrome, which writes a temporary profile and talks to it over a local port. Codex runs commands in a sandbox, and that sandbox may stop Chrome. The figure is still built; only its checks fail. In order of preference:
+
+1. When Codex asks to run a check outside the sandbox, approve it for that command. This needs the default `approval_policy = "on-request"`.
+2. Or allow it once in `~/.codex/config.toml`:
+
+   ```toml
+   approval_policy = "on-request"
+   sandbox_mode = "workspace-write"
+
+   [sandbox_workspace_write]
+   network_access = true
+   writable_roots = ["/tmp"]
+   ```
+
+   Newer Codex releases may name these settings differently; check the config reference for your version.
+3. Or run the check yourself in a normal terminal, for example `node scripts/capture.mjs page.html --out shots/page.png`.
+
+Starting Codex with `--sandbox danger-full-access` also works, but it lifts every limit for that session, so keep it for projects you trust.
+
+</details>
+
 ## Usage
 
 Type `/anatomy` (in Codex, `$anatomy`) and say what the figure should explain:
