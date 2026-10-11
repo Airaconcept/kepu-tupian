@@ -1,3 +1,4 @@
+import { chromePort } from "./chrome-port.mjs";
 import { spawn } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
@@ -38,7 +39,7 @@ Fractions are 0..1 across the element.
                                           pass code for keys that share a name ("Shift" + "ShiftRight", "Enter" + "NumpadEnter")
   ["slow", factor]                        run the page's requestAnimationFrame and performance.now clock at factor x real
                                           time (0.05 = 20x slow motion) so sheets catch 100 ms events; ["slow", 1] restores it
-  ["until", js, timeoutMs?]               poll a JS expression until it is truthy (default 10 s), e.g. a readout reaching a phase
+  ["until", js, timeoutMs?]               poll a JS expression until it is truthy (default 10 s); a timeout stops the run with exit 1
   ["eval", js]                            run JS in the page and print the result
   ["shot", out.png, sel?, scale?, [x,y,w,h]?]           screenshot an element, or a region of it in CSS px
   ["lines", out.png?, sel?, options?]     check every texture line's two ends: each must land on a stroke, a dot or an outline
@@ -102,6 +103,11 @@ async function main() {
   }
   const [target, script] = rest;
   const actions = options.actions ?? JSON.parse(script ?? "[]");
+  const kinds = new Set(["scroll", "wait", "move", "click", "drag", "key", "slow", "until", "eval", "shot", "lines", "turn", "orbit", "sheet"]);
+  if (!Array.isArray(actions)) throw new Error("actions must be an array");
+  for (const action of actions) {
+    if (!Array.isArray(action) || !kinds.has(action[0])) throw new Error(`unknown action ${Array.isArray(action) ? action[0] : action}`);
+  }
   const url = /^https?:|^file:/.test(target) ? target : pathToFileURL(resolve(target)).href;
   const binary = chromePath();
   if (!binary) {
@@ -110,18 +116,7 @@ async function main() {
   }
   const profile = mkdtempSync(join(tmpdir(), "iso-drive-"));
   const chrome = spawn(binary, ["--headless=new", "--remote-debugging-port=0", `--user-data-dir=${profile}`, "--no-first-run", "--no-default-browser-check", "--hide-scrollbars", "--allow-file-access-from-files", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist", "about:blank"]);
-  const port = await new Promise((done, fail) => {
-    let text = "";
-    const timer = setTimeout(() => fail(new Error("Chrome did not start")), 20000);
-    chrome.stderr.on("data", (chunk) => {
-      text += chunk;
-      const match = text.match(/DevTools listening on ws:\/\/[^:]+:(\d+)\//);
-      if (match) {
-        clearTimeout(timer);
-        done(Number(match[1]));
-      }
-    });
-  });
+  const port = await chromePort(chrome, profile);
   const finish = (code) => {
     chrome.kill("SIGKILL");
     try {
@@ -154,7 +149,13 @@ async function main() {
         pending.set(call, done);
         socket.send(JSON.stringify({ id: call, method, params }));
       });
-    const evaluate = async (expression) => (await send("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true })).result?.result?.value;
+    const evaluate = async (expression) => {
+      const reply = await send("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true });
+      if (reply.error) throw new Error(reply.error.message);
+      const exception = reply.result?.exceptionDetails;
+      if (exception) throw new Error(exception.exception?.description ?? exception.text);
+      return reply.result?.result?.value;
+    };
     const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
     await send("Runtime.enable");
     await send("Page.enable");
@@ -167,7 +168,9 @@ async function main() {
     const early = [SLOW, options.noWebgl ? NO_GL : "", options.preload ?? ""].filter(Boolean).join("\n");
     await send("Page.addScriptToEvaluateOnNewDocument", { source: early });
     await send("Emulation.setDeviceMetricsOverride", { width: options.width, height: options.height, deviceScaleFactor: options.scale, mobile: options.width < 600 });
-    await send("Page.navigate", { url });
+    const navigation = await send("Page.navigate", { url });
+    if (navigation.error) throw new Error(`Navigation failed: ${navigation.error.message}`);
+    if (navigation.result?.errorText) throw new Error(`Navigation failed: ${navigation.result.errorText}`);
     await sleep(1200);
     const boxOf = (selector) => evaluate(`(()=>{const el=document.querySelector(${JSON.stringify(selector ?? ".iso-plate")})||document.body;const r=el.getBoundingClientRect();return {x:r.left,y:r.top,w:r.width,h:r.height,sx:scrollX,sy:scrollY}})()`);
     const readout = () => evaluate(`(document.querySelector("[data-readout]")||{}).textContent||""`);
@@ -222,8 +225,8 @@ async function main() {
         const key = args[0];
         const named = { " ": "Space", "-": "Minus", "=": "Equal", ",": "Comma", ".": "Period", "/": "Slash", ";": "Semicolon", "'": "Quote", "[": "BracketLeft", "]": "BracketRight", "\\": "Backslash", "`": "Backquote" };
         const code = args[2] ?? (named[key] ?? (/^[0-9]$/.test(key) ? `Digit${key}` : key.length === 1 ? `Key${key.toUpperCase()}` : key));
-        await send("Input.dispatchKeyEvent", { type: "keyDown", key, code, text: key.length === 1 ? key : undefined, windowsVirtualKeyCode: key === " " ? 32 : 0 });
-        await send("Input.dispatchKeyEvent", { type: "keyUp", key, code });
+        await send("Input.dispatchKeyEvent", { type: "keyDown", key, code, text: key === "Enter" ? "\r" : key.length === 1 ? key : undefined, windowsVirtualKeyCode: key === " " ? 32 : key === "Enter" ? 13 : 0 });
+        await send("Input.dispatchKeyEvent", { type: "keyUp", key, code, windowsVirtualKeyCode: key === "Enter" ? 13 : undefined });
       } else if (kind === "eval") console.log("eval:", JSON.stringify(await evaluate(args[0])));
       else if (kind === "slow") await evaluate(`window.__driveSpeed=${Number(args[0])}`);
       else if (kind === "until") {
@@ -236,7 +239,7 @@ async function main() {
           }
           await sleep(25);
         }
-        if (!ok) console.log(`until: timed out waiting for ${args[0]}`);
+        if (!ok) throw new Error(`until: timed out waiting for ${args[0]}`);
       }
       else if (kind === "shot") {
         const [out, selector, scale, region] = args;
@@ -287,7 +290,7 @@ async function main() {
           console.log(`shot ${out}`);
         }
         failed += result.problems.length;
-      } else console.log(`unknown action ${kind}`);
+      }
     }
     console.log(problems.length ? problems.join("\n") : "console: clean");
     socket.close();

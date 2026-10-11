@@ -12,6 +12,31 @@ All notable changes to Anatomy are recorded here. The format follows [Keep a Cha
 
 ### Fixed
 
+- `scripts/drive.mjs` now fails when a browser evaluation throws or rejects, rather than reporting a clean successful session.
+- The arcade cabinet now accepts coins with reduced motion enabled, preserving the meter, credit and power-on events when the coin animation is skipped.
+- The turning dial stops its idle tour when reduced motion is enabled while the page is open and cancels its pending automatic restart while preserving keyboard and pointer input.
+- `scripts/drive.mjs` now exits with status 1 and stops subsequent actions when an `until` condition times out.
+- `scripts/capture.mjs` now creates the output directory for screenshots, including nested paths under `shots/`.
+- The line-end check now includes the selected element when `--select` names an SVG, rather than checking only SVGs inside it.
+- `scripts/drive.mjs` now rejects unknown actions before running the session, so a misspelled verification step cannot report success.
+- Browser checks now fail promptly and remove their temporary profiles when Chrome exits before its debugging port is ready.
+- The line-end check now uses ellipse boundaries and transformed circle boundaries, and treats hollow interiors as empty instead of solid dots.
+- The line-end check now follows SVG arc curves instead of treating each arc as a straight chord.
+- Capture and drive now fail when Chrome cannot load the requested page, instead of reporting a clean browser error page.
+- Orbit checks reject invalid sampling steps and empty pose lists before a zero-state sweep can pass.
+- Solid clearance audits rebuild cached surface grids when sampling spacing or cell size changes.
+- Tube geometry audits use tapered radii instead of replacing every segment with an averaged cylinder.
+- The line verifier reflects smooth Bezier controls only after the matching curve family.
+- Capture and drive send native Enter activation so button and form checks perform their default action.
+- Fixed-part and coverage bounds restore a closed SVG subpath origin before relative moves.
+- Audit ray casts now refresh body camera coefficients when the projection direction changes, so repeated builds retain the correct depth order.
+- Audit profile tracing now checks quarter-span deviations, preserving inflected analytic and smooth profiles whose midpoint lies on their chord.
+- Depth-key solving now allows large acyclic figures to converge beyond 400 rounds and avoids choosing a cycle victim from an empty set of violated rules.
+- Splitting now accepts default fixed rounds and preserves explicit prism/round ownership, so a pipe fitting can be split without inventing collisions with its own pipe.
+- Turning builders now reject missing named part/parent groups and duplicate group names before authored motions silently become static or alias one value.
+- Native fidelity checks now compare complete filled silhouettes for cut parts and honor open round ends in the kit reference, preserving deliberately unstroked cut edges.
+- Tube fidelity checks path coverage in both directions when vertex counts differ, rejecting empty or truncated live silhouettes while preserving equivalent resampling.
+- Solid clearances check sliding rods whose drawn reach changes, even when their stretching geometry leaves no relative translation to a stationary obstacle.
 - `examples/test-rig/` drew its glass button dark in the light theme. `stretch.css` now has light values for its own colours.
 
 ### Changed

@@ -52,6 +52,12 @@ After a build, `git status --short` must show nothing unless you meant to change
 
 Run the ones that match what you touched, and read every PNG they write: open it and look. Put screenshots in `shots/`, which is ignored.
 
+**Browser driver regressions.** When changing `scripts/drive.mjs`, check that failed browser evaluations exit nonzero and successful evaluations still work.
+
+```sh
+node --test scripts/drive.test.mjs
+```
+
 **Geometry audit.** For figures with pipes, cables or round parts. It must end `audit passed`, with every failing line at 0.
 
 ```sh

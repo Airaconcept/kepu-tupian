@@ -1,3 +1,4 @@
+import { chromePort } from "./chrome-port.mjs";
 import { spawn } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
@@ -36,18 +37,7 @@ function chromePath() {
 async function browser(target, { width, height, scale, throttle, noWebgl }) {
   const profile = mkdtempSync(join(tmpdir(), "turn-check-"));
   const chrome = spawn(chromePath(), ["--headless=new", "--remote-debugging-port=0", `--user-data-dir=${profile}`, "--no-first-run", "--no-default-browser-check", "--hide-scrollbars", "--allow-file-access-from-files", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist", "about:blank"]);
-  const port = await new Promise((done, fail) => {
-    let text = "";
-    const timer = setTimeout(() => fail(new Error("Chrome did not start")), 20000);
-    chrome.stderr.on("data", (chunk) => {
-      text += chunk;
-      const match = text.match(/DevTools listening on ws:\/\/[^:]+:(\d+)\//);
-      if (match) {
-        clearTimeout(timer);
-        done(Number(match[1]));
-      }
-    });
-  });
+  const port = await chromePort(chrome, profile);
   const page = await (await fetch(`http://127.0.0.1:${port}/json/new?about:blank`, { method: "PUT" })).json();
   const socket = new WebSocket(page.webSocketDebuggerUrl);
   let id = 0;
@@ -505,9 +495,13 @@ async function main() {
   }
   const options = { width: Number(value("--width", 1440)), height: Number(value("--height", 1100)), scale: Number(value("--scale", argv.includes("--perf") ? (Number(value("--width", 1440)) < 600 ? 3 : 2) : 1)), throttle: Number(value("--throttle", 1)), noWebgl: argv.includes("--no-webgl") };
   const step = Number(value("--step", 1));
+  if (!Number.isFinite(step) || step <= 0 || step > 360) throw new Error("--step must be a finite number greater than 0 and at most 360 degrees");
+  const fine = Number(value("--fine", 0.1));
+  if (argv.includes("--pops") && (!Number.isFinite(fine) || fine <= 0 || fine > 180)) throw new Error("--fine must be a finite number greater than 0 and at most 180 degrees");
   const out = value("--out", null);
   const statesFile = value("--states", null);
   const states = statesFile ? JSON.parse(readFileSync(statesFile, "utf8")) : null;
+  if (statesFile && (!Array.isArray(states) || !states.length)) throw new Error("--states must contain a nonempty JSON list of poses");
   const page = await browser(target, options);
   const labelOf = (state, index) => (typeof state === "number" ? `${state.toFixed(3)}°` : `state ${index}`);
   try {
@@ -576,7 +570,6 @@ async function main() {
       if (!states) {
         let cores = 0;
         const small = [];
-        const fine = Number(value("--fine", 0.1));
         for (let x = 0; x + 2 * fine <= 360 + 1e-9; x += fine) {
           const r = await page.evaluate(`window.__tc.pops.second(${x.toFixed(4)}, ${(x + fine).toFixed(4)}, ${(x + 2 * fine).toFixed(4)})`);
           if (r.n >= 6) {

@@ -1,7 +1,8 @@
+import { chromePort } from "./chrome-port.mjs";
 import { spawn } from "node:child_process";
-import { existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 if (typeof WebSocket === "undefined" && !process.execArgv.includes("--experimental-websocket")) {
@@ -110,18 +111,7 @@ async function main() {
     "--ignore-gpu-blocklist",
     "about:blank",
   ]);
-  const port = await new Promise((done, fail) => {
-    let text = "";
-    const timer = setTimeout(() => fail(new Error("Chrome did not start")), 20000);
-    chrome.stderr.on("data", (chunk) => {
-      text += chunk;
-      const match = text.match(/DevTools listening on ws:\/\/[^:]+:(\d+)\//);
-      if (match) {
-        clearTimeout(timer);
-        done(Number(match[1]));
-      }
-    });
-  });
+  const port = await chromePort(chrome, profile);
   const finish = (code) => {
     chrome.kill("SIGKILL");
     try {
@@ -163,7 +153,9 @@ async function main() {
     if (options.theme) features.push({ name: "prefers-color-scheme", value: options.theme });
     if (features.length) await send("Emulation.setEmulatedMedia", { features });
     await send("Emulation.setDeviceMetricsOverride", { width: options.width, height: options.height, deviceScaleFactor: options.scale, mobile: options.width < 600 });
-    await send("Page.navigate", { url });
+    const navigation = await send("Page.navigate", { url });
+    if (navigation.error) throw new Error(`Navigation failed: ${navigation.error.message}`);
+    if (navigation.result?.errorText) throw new Error(`Navigation failed: ${navigation.result.errorText}`);
     await sleep(Math.min(options.wait, 1500));
     await evaluate(`(async()=>{const h=document.documentElement.scrollHeight;for(let y=0;y<h;y+=400){scrollTo(0,y);await new Promise(r=>setTimeout(r,60))}scrollTo(0,0)})()`);
     await sleep(Math.max(0, options.wait - 1500));
@@ -191,14 +183,15 @@ async function main() {
         if (entry === "Tab") continue;
         const key = entry === "Comma" ? "," : entry === "Space" ? " " : entry;
         const code = named[key] ?? (/^[0-9]$/.test(key) ? `Digit${key}` : key.length === 1 ? `Key${key.toUpperCase()}` : key);
-        await send("Input.dispatchKeyEvent", { type: "keyDown", key, code, text: key.length === 1 ? key : undefined, windowsVirtualKeyCode: key === " " ? 32 : 0 });
-        await send("Input.dispatchKeyEvent", { type: "keyUp", key, code });
+        await send("Input.dispatchKeyEvent", { type: "keyDown", key, code, text: key === "Enter" ? "\r" : key.length === 1 ? key : undefined, windowsVirtualKeyCode: key === " " ? 32 : key === "Enter" ? 13 : 0 });
+        await send("Input.dispatchKeyEvent", { type: "keyUp", key, code, windowsVirtualKeyCode: key === "Enter" ? 13 : undefined });
         await sleep(250);
       }
       await sleep(1200);
     }
     const shoot = async (path, clip, scale) => {
       const shot = await send("Page.captureScreenshot", { format: "png", captureBeyondViewport: true, clip: { ...clip, scale } });
+      mkdirSync(dirname(path), { recursive: true });
       writeFileSync(path, Buffer.from(shot.result.data, "base64"));
     };
     const clipOf = () => {

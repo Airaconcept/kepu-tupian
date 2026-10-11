@@ -25,6 +25,8 @@ jobs:
         with:
           node-version: 22
 
+      - name: Regression tests
+        run: node --test scripts/*.test.mjs
       - name: Dial indicator
         run: |
           node examples/dial-indicator/build.mjs

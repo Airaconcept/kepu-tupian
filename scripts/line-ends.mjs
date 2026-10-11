@@ -5,7 +5,7 @@ function lineEnds({ select = null, tolerance = 1, root: rootSlack = 2, mark = 7,
   style.textContent = `${select || ".iso-plate"} *{pointer-events:none!important}${select || ".iso-plate"} svg,${select || ".iso-plate"} svg *{pointer-events:visiblePainted!important}`;
   document.head.append(style);
   const skipClass = ["iso-edge", "iso-bevel", "iso-crease", "tb-edge"];
-  const svgs = [...plate.querySelectorAll("svg")];
+  const svgs = [...(plate.matches("svg") ? [plate] : []), ...plate.querySelectorAll("svg")];
   const shapes = svgs.flatMap((svg) => [...svg.querySelectorAll("path, line, polyline, polygon, circle, ellipse, rect")]).filter((el) => !el.closest("defs, clipPath, mask, pattern, marker, symbol"));
   const opacityOf = (el) => {
     let alpha = 1;
@@ -45,7 +45,7 @@ function lineEnds({ select = null, tolerance = 1, root: rootSlack = 2, mark = 7,
         const u = 1 - t;
         push(u * u * u * x0 + 3 * u * u * t * x1 + 3 * u * t * t * x2 + t * t * t * px, u * u * u * y0 + 3 * u * u * t * y1 + 3 * u * t * t * y2 + t * t * t * py);
       }
-      control = [x2, y2];
+      control = { kind: "cubic", point: [x2, y2] };
     };
     const quad = (x1, y1, px, py) => {
       const x0 = x;
@@ -55,7 +55,7 @@ function lineEnds({ select = null, tolerance = 1, root: rootSlack = 2, mark = 7,
         const u = 1 - t;
         push(u * u * x0 + 2 * u * t * x1 + t * t * px, u * u * y0 + 2 * u * t * y1 + t * t * py);
       }
-      control = [x1, y1];
+      control = { kind: "quadratic", point: [x1, y1] };
     };
     for (const [, command, args] of d.matchAll(/([MmLlHhVvCcSsQqTtAaZz])([^MmLlHhVvCcSsQqTtAaZz]*)/g)) {
       const v = numbers(args);
@@ -86,16 +86,25 @@ function lineEnds({ select = null, tolerance = 1, root: rootSlack = 2, mark = 7,
       else if (C === "C") for (let i = 0; i + 5 < v.length; i += 6) cubic(v[i] + ox(), v[i + 1] + oy(), v[i + 2] + ox(), v[i + 3] + oy(), v[i + 4] + ox(), v[i + 5] + oy());
       else if (C === "S")
         for (let i = 0; i + 3 < v.length; i += 4) {
-          const reflected = control ? [2 * x - control[0], 2 * y - control[1]] : [x, y];
+          const reflected = control?.kind === "cubic" ? [2 * x - control.point[0], 2 * y - control.point[1]] : [x, y];
           cubic(reflected[0], reflected[1], v[i] + ox(), v[i + 1] + oy(), v[i + 2] + ox(), v[i + 3] + oy());
         }
       else if (C === "Q") for (let i = 0; i + 3 < v.length; i += 4) quad(v[i] + ox(), v[i + 1] + oy(), v[i + 2] + ox(), v[i + 3] + oy());
       else if (C === "T")
         for (let i = 0; i + 1 < v.length; i += 2) {
-          const reflected = control ? [2 * x - control[0], 2 * y - control[1]] : [x, y];
+          const reflected = control?.kind === "quadratic" ? [2 * x - control.point[0], 2 * y - control.point[1]] : [x, y];
           quad(reflected[0], reflected[1], v[i] + ox(), v[i + 1] + oy());
         }
-      else if (C === "A") for (let i = 0; i + 6 < v.length; i += 7) push(v[i + 5] + ox(), v[i + 6] + oy());
+      else if (C === "A") {
+        const arc = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        arc.setAttribute("d", `M${x} ${y}${command}${args}`);
+        const length = arc.getTotalLength();
+        const count = Math.max(8, Math.ceil(length / 2));
+        for (let index = 1; index <= count; index++) {
+          const point = arc.getPointAtLength(length * index / count);
+          push(point.x, point.y);
+        }
+      }
       if (C !== "C" && C !== "S" && C !== "Q" && C !== "T") control = null;
     }
     return out;
@@ -139,10 +148,19 @@ function lineEnds({ select = null, tolerance = 1, root: rootSlack = 2, mark = 7,
     const filled = cs.fill !== "none" && Number(cs.fillOpacity) > 0.05;
     if (tag === "circle" || tag === "ellipse") {
       if (!stroked && !filled) continue;
-      const c = map([Number(el.getAttribute("cx") || 0), Number(el.getAttribute("cy") || 0)]);
-      const r = Number(el.getAttribute("r") || el.getAttribute("rx") || 0) * Math.hypot(ctm.a, ctm.b);
-      const entry = { el, kind: "dot", c, r };
-      for (let gx = Math.floor((c[0] - r) / cell); gx <= Math.floor((c[0] + r) / cell); gx++) for (let gy = Math.floor((c[1] - r) / cell); gy <= Math.floor((c[1] + r) / cell); gy++) add(gx, gy, entry);
+      const cx = Number(el.getAttribute("cx") || 0);
+      const cy = Number(el.getAttribute("cy") || 0);
+      const rx = Number(el.getAttribute(tag === "circle" ? "r" : "rx") || 0);
+      const ry = Number(el.getAttribute(tag === "circle" ? "r" : "ry") || 0);
+      if (rx <= 0 || ry <= 0) continue;
+      const points = Array.from({ length: 128 }, (_, index) => {
+        const angle = index * Math.PI * 2 / 128;
+        return map([cx + rx * Math.cos(angle), cy + ry * Math.sin(angle)]);
+      });
+      const entry = { el, kind: "round", points, cx, cy, rx, ry, filled };
+      const xs = points.map(([x]) => x);
+      const ys = points.map(([, y]) => y);
+      for (let gx = Math.floor(Math.min(...xs) / cell); gx <= Math.floor(Math.max(...xs) / cell); gx++) for (let gy = Math.floor(Math.min(...ys) / cell); gy <= Math.floor(Math.max(...ys) / cell); gy++) add(gx, gy, entry);
       continue;
     }
     if (!stroked) continue;
@@ -196,8 +214,11 @@ function lineEnds({ select = null, tolerance = 1, root: rootSlack = 2, mark = 7,
     for (let i = 1; i < own.length; i++) along.push(along[i - 1] + Math.hypot(own[i][0] - own[i - 1][0], own[i][1] - own[i - 1][1]));
     const total = along[along.length - 1];
     for (const entry of near(p, reach * 4)) {
-      if (entry.kind === "dot") {
-        best = Math.min(best, Math.max(0, Math.hypot(p[0] - entry.c[0], p[1] - entry.c[1]) - entry.r));
+      if (entry.kind === "round") {
+        const local = inverse(entry.el, p);
+        const inside = ((local[0] - entry.cx) / entry.rx) ** 2 + ((local[1] - entry.cy) / entry.ry) ** 2 <= 1;
+        if (entry.filled && inside) best = 0;
+        else for (let index = 0; index < entry.points.length; index++) best = Math.min(best, segmentDistance(p, entry.points[index], entry.points[(index + 1) % entry.points.length]));
         continue;
       }
       if (entry.el === line.el && entry.sub === sub.index) {

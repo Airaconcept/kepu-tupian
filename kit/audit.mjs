@@ -19,7 +19,11 @@ export function traced(meridian, { radius = null, error = 0.02, depth = 6 } = {}
     if (at) {
       const split = (a, b, level) => {
         const mid = (a + b) / 2;
-        if (level >= depth || Math.abs(at(mid) - (at(a) + at(b)) / 2) <= error) return;
+        if (level >= depth) return;
+        const ra = at(a);
+        const rb = at(b);
+        const deviation = Math.max(...[0.25, 0.5, 0.75].map((t) => Math.abs(at(a + (b - a) * t) - (ra + (rb - ra) * t))));
+        if (deviation <= error) return;
         split(a, mid, level + 1);
         out.push([mid, at(mid)]);
         split(mid, b, level + 1);
@@ -133,7 +137,7 @@ function polygonDistance(poly, x, y) {
   return inside ? -d : d;
 }
 
-function cappedSegment(p, a, b, r) {
+function cappedSegment(p, a, b, r, endRadius = r) {
   const bx = b[0] - a[0];
   const by = b[1] - a[1];
   const bz = b[2] - a[2];
@@ -142,6 +146,12 @@ function cappedSegment(p, a, b, r) {
   const pz = p[2] - a[2];
   const baba = bx * bx + by * by + bz * bz || 1e-12;
   const paba = px * bx + py * by + pz * bz;
+  if (endRadius !== r) {
+    const length = Math.sqrt(baba);
+    const along = paba / length;
+    const radial = Math.hypot(px - bx * paba / baba, py - by * paba / baba, pz - bz * paba / baba);
+    return polyDistance([[0, 0], [0, r], [length, endRadius], [length, 0]], along, radial);
+  }
   const x = Math.hypot(px * baba - bx * paba, py * baba - by * paba, pz * baba - bz * paba) - r * baba;
   const y = Math.abs(paba - baba * 0.5) - baba * 0.5;
   const x2 = x * x;
@@ -201,8 +211,7 @@ function baseSdf(shape, p) {
   let best = BIG;
   const last = points.length - 1;
   for (let index = 0; index < last; index++) {
-    const r = (radii[index] + radii[index + 1]) / 2;
-    const d = cappedSegment(p, points[index], points[index + 1], r);
+    const d = cappedSegment(p, points[index], points[index + 1], radii[index], radii[index + 1]);
     if (d < best) best = d;
   }
   if (round[0]) best = Math.min(best, len3(sub3(p, points[0])) - radii[0]);
@@ -310,7 +319,7 @@ function tubeDistance(shape, p, segments) {
   const last = points.length - 1;
   let best = BIG;
   for (const index of segments) {
-    const d = cappedSegment(p, points[index], points[index + 1], (radii[index] + radii[index + 1]) / 2);
+    const d = cappedSegment(p, points[index], points[index + 1], radii[index], radii[index + 1]);
     if (d < best) best = d;
     for (const [joint, flag] of [[0, round[0]], [last, round[1]]]) {
       if (!flag || (joint !== index && joint !== index + 1)) continue;
@@ -324,9 +333,9 @@ function tubeDistance(shape, p, segments) {
 
 function bodyDepth(shape, c, V, eps) {
   const { F, poly } = shape;
-  if (!shape._f) {
+  if (!shape._f || shape._f.view.some((value, index) => value !== V[index])) {
     const s = poly.map(([value]) => value);
-    shape._f = { aV: dot3(F.a, V), uV: dot3(F.u, V), vV: dot3(F.v, V), s0: Math.min(...s), s1: Math.max(...s), rm: Math.max(...poly.map(([, r]) => r)) };
+    shape._f = { view: [...V], aV: dot3(F.a, V), uV: dot3(F.u, V), vV: dot3(F.v, V), s0: Math.min(...s), s1: Math.max(...s), rm: Math.max(...poly.map(([, r]) => r)) };
   }
   const { aV, uV, vV, s0, s1, rm } = shape._f;
   const q = [c[0] - F.o[0], c[1] - F.o[1], c[2] - F.o[2]];
@@ -669,7 +678,7 @@ export function orderKeys(items, overlaps, { gap = 0.02, rounds = 0 } = {}) {
     }
   }
   const rules = [...strongest.values()];
-  const limit = rounds || Math.min(items.length + 1, 400);
+  const limit = rounds || items.length + 1;
   const dropped = [];
   let keys = start.slice();
   let active = rules.slice();
@@ -705,7 +714,9 @@ export function orderKeys(items, overlaps, { gap = 0.02, rounds = 0 } = {}) {
         walk = by[walk].back;
       } while (walk !== node && loop.length <= items.length);
     }
-    const victim = (loop.length ? loop : active.filter((rule) => keys[rule.front] - keys[rule.back] < rule.need - 1e-9)).reduce((low, rule) => (rule.weight < low.weight ? rule : low));
+    const candidates = loop.length ? loop : active.filter((rule) => keys[rule.front] - keys[rule.back] < rule.need - 1e-9);
+    if (!candidates.length) break;
+    const victim = candidates.reduce((low, rule) => (rule.weight < low.weight ? rule : low));
     dropped.push(victim);
     active = active.filter((rule) => rule !== victim);
   }
@@ -1386,6 +1397,8 @@ function pointsOfShape(tag, attrs) {
     const out = [];
     let x = 0;
     let y = 0;
+    let sx = 0;
+    let sy = 0;
     for (const [, command, args] of d.matchAll(/([MmLlHhVvCcSsQqTtAaZz])([^MmLlHhVvCcSsQqTtAaZz]*)/g)) {
       const v = (args.match(NUMBER) ?? []).map(Number);
       const rel = command === command.toLowerCase();
@@ -1398,11 +1411,18 @@ function pointsOfShape(tag, attrs) {
       if (C === "H") for (const value of v) [x] = take([value + (rel ? x : 0), y]);
       else if (C === "V") for (const value of v) [, y] = take([x, value + (rel ? y : 0)]);
       else if (C === "A") for (let i = 0; i + 6 < v.length; i += 7) [x, y] = take([v[i + 5] + (rel ? x : 0), v[i + 6] + (rel ? y : 0)]);
-      else if (C !== "Z") {
+      else if (C === "Z") {
+        x = sx;
+        y = sy;
+      } else {
         const width = C === "C" ? 6 : C === "S" || C === "Q" ? 4 : 2;
         for (let i = 0; i + 1 < v.length; i += width) {
           for (let j = 0; j < width; j += 2) out.push(pair(i + j));
           [x, y] = pair(i + width - 2);
+          if (C === "M" && i === 0) {
+            sx = x;
+            sy = y;
+          }
         }
       }
     }
@@ -1563,11 +1583,20 @@ export function selfOverlaps(items, P, { entries: given = null, fold = 0.25, lea
 }
 
 export function solidClearances(solids, { state, sunk = 0.5, spacing = 0.6, cell = 4 } = {}) {
-  const list = solids.filter((shape) => shape.kind !== "tube").map((shape) => (shape.slide && state !== undefined && shape.move ? { ...moved(shape, offsetOf(shape, state)), move: undefined } : shape));
+  const stretched = new Set();
+  const list = solids.filter((shape) => shape.kind !== "tube").map((shape) => {
+    if (!(shape.slide && state !== undefined && shape.move)) return shape;
+    const next = { ...moved(shape, offsetOf(shape, state)), move: undefined };
+    if (next.slide.to !== shape.slide.to) stretched.add(next);
+    return next;
+  });
   if (!solidClearances.cache) solidClearances.cache = new WeakMap();
   const cache = solidClearances.cache;
   const gridOf = (shape) => {
-    let grid = cache.get(shape);
+    let samples = cache.get(shape);
+    if (!samples) cache.set(shape, samples = new Map());
+    const key = `${spacing}:${cell}`;
+    let grid = samples.get(key);
     if (grid) return grid;
     grid = new Map();
     for (const p of surfaceOf(shape, spacing)) {
@@ -1575,7 +1604,7 @@ export function solidClearances(solids, { state, sunk = 0.5, spacing = 0.6, cell
       if (!grid.has(key)) grid.set(key, []);
       grid.get(key).push(p);
     }
-    cache.set(shape, grid);
+    samples.set(key, grid);
     return grid;
   };
   const pointsIn = (shape, box) => {
@@ -1601,7 +1630,7 @@ export function solidClearances(solids, { state, sunk = 0.5, spacing = 0.6, cell
   for (let a = 0; a < list.length; a++)
     for (let b = a + 1; b < list.length; b++) {
       const rel = sub3(offsets[a], offsets[b]);
-      if (Math.abs(rel[0]) + Math.abs(rel[1]) + Math.abs(rel[2]) < 1e-6) continue;
+      if (Math.abs(rel[0]) + Math.abs(rel[1]) + Math.abs(rel[2]) < 1e-6 && !stretched.has(list[a]) && !stretched.has(list[b])) continue;
       const box = { min: [0, 1, 2].map((i) => Math.max(bounds[a].min[i] + rel[i], bounds[b].min[i])), max: [0, 1, 2].map((i) => Math.min(bounds[a].max[i] + rel[i], bounds[b].max[i])) };
       if (box.min.some((v, i) => v > box.max[i] - sunk)) continue;
       if (seatedOn(list[a], list[b]) || seatedOn(list[b], list[a])) continue;
