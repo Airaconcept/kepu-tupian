@@ -25,6 +25,9 @@ jobs:
         with:
           node-version: 22
 
+      - name: Enter key regressions
+        run: node --test scripts/enter-key.test.mjs
+
       - name: Dial indicator
         run: |
           node examples/dial-indicator/build.mjs
