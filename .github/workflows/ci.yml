@@ -31,6 +31,8 @@ jobs:
         run: node --test scripts/capture.test.mjs
       - name: Line check regressions
         run: node --test scripts/lines.test.mjs
+      - name: Drive action regressions
+        run: node --test scripts/drive-actions.test.mjs
 
       - name: Dial indicator
         run: |
