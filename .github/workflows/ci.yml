@@ -29,6 +29,8 @@ jobs:
         run: node --test scripts/*.test.mjs
       - name: Inflected profile regressions
         run: node --test scripts/audit-profile.test.mjs
+      - name: Depth key convergence regressions
+        run: node --test scripts/audit-order-convergence.test.mjs
 
       - name: Dial indicator
         run: |

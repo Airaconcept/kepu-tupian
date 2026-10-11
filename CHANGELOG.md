@@ -31,6 +31,7 @@ All notable changes to Anatomy are recorded here. The format follows [Keep a Cha
 - Fixed-part and coverage bounds restore a closed SVG subpath origin before relative moves.
 - Audit ray casts now refresh body camera coefficients when the projection direction changes, so repeated builds retain the correct depth order.
 - Audit profile tracing now checks quarter-span deviations, preserving inflected analytic and smooth profiles whose midpoint lies on their chord.
+- Depth-key solving now allows large acyclic figures to converge beyond 400 rounds and avoids choosing a cycle victim from an empty set of violated rules.
 
 - `examples/test-rig/` drew its glass button dark in the light theme. `stretch.css` now has light values for its own colours.
 
