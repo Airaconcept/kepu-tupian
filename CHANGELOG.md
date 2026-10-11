@@ -28,6 +28,7 @@ All notable changes to Anatomy are recorded here. The format follows [Keep a Cha
 - Tube geometry audits use tapered radii instead of replacing every segment with an averaged cylinder.
 - The line verifier reflects smooth Bezier controls only after the matching curve family.
 - Capture and drive send native Enter activation so button and form checks perform their default action.
+- Fixed-part and coverage bounds restore a closed SVG subpath origin before relative moves.
 
 - `examples/test-rig/` drew its glass button dark in the light theme. `stretch.css` now has light values for its own colours.
 
