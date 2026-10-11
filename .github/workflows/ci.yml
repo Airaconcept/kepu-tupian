@@ -41,6 +41,8 @@ jobs:
         run: node --test scripts/lines-arcs.test.mjs
       - name: Navigation regressions
         run: node --test scripts/navigation.test.mjs
+      - name: Orbit sampling regressions
+        run: node --test scripts/orbit-sampling.test.mjs
 
       - name: Dial indicator
         run: |

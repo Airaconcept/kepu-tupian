@@ -495,9 +495,13 @@ async function main() {
   }
   const options = { width: Number(value("--width", 1440)), height: Number(value("--height", 1100)), scale: Number(value("--scale", argv.includes("--perf") ? (Number(value("--width", 1440)) < 600 ? 3 : 2) : 1)), throttle: Number(value("--throttle", 1)), noWebgl: argv.includes("--no-webgl") };
   const step = Number(value("--step", 1));
+  if (!Number.isFinite(step) || step <= 0 || step > 360) throw new Error("--step must be a finite number greater than 0 and at most 360 degrees");
+  const fine = Number(value("--fine", 0.1));
+  if (argv.includes("--pops") && (!Number.isFinite(fine) || fine <= 0 || fine > 180)) throw new Error("--fine must be a finite number greater than 0 and at most 180 degrees");
   const out = value("--out", null);
   const statesFile = value("--states", null);
   const states = statesFile ? JSON.parse(readFileSync(statesFile, "utf8")) : null;
+  if (statesFile && (!Array.isArray(states) || !states.length)) throw new Error("--states must contain a nonempty JSON list of poses");
   const page = await browser(target, options);
   const labelOf = (state, index) => (typeof state === "number" ? `${state.toFixed(3)}°` : `state ${index}`);
   try {
@@ -566,7 +570,6 @@ async function main() {
       if (!states) {
         let cores = 0;
         const small = [];
-        const fine = Number(value("--fine", 0.1));
         for (let x = 0; x + 2 * fine <= 360 + 1e-9; x += fine) {
           const r = await page.evaluate(`window.__tc.pops.second(${x.toFixed(4)}, ${(x + fine).toFixed(4)}, ${(x + 2 * fine).toFixed(4)})`);
           if (r.n >= 6) {
