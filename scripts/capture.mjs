@@ -183,8 +183,8 @@ async function main() {
         if (entry === "Tab") continue;
         const key = entry === "Comma" ? "," : entry === "Space" ? " " : entry;
         const code = named[key] ?? (/^[0-9]$/.test(key) ? `Digit${key}` : key.length === 1 ? `Key${key.toUpperCase()}` : key);
-        await send("Input.dispatchKeyEvent", { type: "keyDown", key, code, text: key.length === 1 ? key : undefined, windowsVirtualKeyCode: key === " " ? 32 : 0 });
-        await send("Input.dispatchKeyEvent", { type: "keyUp", key, code });
+        await send("Input.dispatchKeyEvent", { type: "keyDown", key, code, text: key === "Enter" ? "\r" : key.length === 1 ? key : undefined, windowsVirtualKeyCode: key === " " ? 32 : key === "Enter" ? 13 : 0 });
+        await send("Input.dispatchKeyEvent", { type: "keyUp", key, code, windowsVirtualKeyCode: key === "Enter" ? 13 : undefined });
         await sleep(250);
       }
       await sleep(1200);

@@ -49,6 +49,8 @@ jobs:
         run: node --test scripts/audit-taper.test.mjs
       - name: Bezier continuation regressions
         run: node --test scripts/lines-bezier.test.mjs
+      - name: Enter key regressions
+        run: node --test scripts/enter-key.test.mjs
 
       - name: Dial indicator
         run: |
