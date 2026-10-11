@@ -1,5 +1,6 @@
 function lineEnds({ select = null, tolerance = 1, root: rootSlack = 2, mark = 7, least = 0.3, cover = 0.5, show = false } = {}) {
-  const plate = (select && document.querySelector(select)) || document.querySelector(".iso-plate") || document.body;
+  const plate = select == null ? document.querySelector(".iso-plate") || document.body : document.querySelector(select);
+  if (!plate) throw new Error(`Line target not found: ${select}`);
   const box = plate.getBoundingClientRect();
   const style = document.createElement("style");
   style.textContent = `${select || ".iso-plate"} *{pointer-events:none!important}${select || ".iso-plate"} svg,${select || ".iso-plate"} svg *{pointer-events:visiblePainted!important}`;
