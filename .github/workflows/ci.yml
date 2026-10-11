@@ -25,6 +25,9 @@ jobs:
         with:
           node-version: 22
 
+      - name: Group reference regressions
+        run: node --test scripts/turn-group-reference.test.mjs
+
       - name: Dial indicator
         run: |
           node examples/dial-indicator/build.mjs

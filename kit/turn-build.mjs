@@ -293,11 +293,18 @@ function thinCloud(points, most = 64) {
 
 export function turning(P, { recorder = null, scale = 1 } = {}) {
   const T = { P, R: recorder, scale, groups: [], layers: [], order: [], parts: [], built: null };
-  const groupOf = (g) => (g === undefined || g === null ? null : typeof g === "string" ? T.groups.find((x) => x.name === g) : g);
+  const groupOf = (g) => {
+    if (g === undefined || g === null) return null;
+    if (typeof g !== "string") return g;
+    const group = T.groups.find((x) => x.name === g);
+    if (!group) throw new Error(`turning: unknown group ${g}`);
+    return group;
+  };
   const layerOf = (l) => (typeof l === "string" ? T.layers.find((x) => x.name === l) : l);
   const origin = (group) => (group ? group.origin : [0, 0, 0]);
   const local = (group, p) => sub3(p, origin(group));
   T.group = (name, options = {}) => {
+    if (T.groups.some((group) => group.name === name)) throw new Error(`turning: duplicate group ${name}`);
     const parent = groupOf(options.parent);
     const po = origin(parent);
     let kind;
