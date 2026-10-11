@@ -13,6 +13,8 @@ All notable changes to Anatomy are recorded here. The format follows [Keep a Cha
 
 ### Fixed
 
+- Capture measures the current figure before every screenshot, including moved, resized and timed zoom crops.
+
 - Preserve configured pipe clearances in broad-phase solid and pipe sampling.
 - Observe replacement and late-mounted DOM targets through useInView.
 - Check texture line attachments against rounded rectangle corners, including separate radii, SVG clamping and transformed outlines.
