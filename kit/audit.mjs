@@ -19,7 +19,11 @@ export function traced(meridian, { radius = null, error = 0.02, depth = 6 } = {}
     if (at) {
       const split = (a, b, level) => {
         const mid = (a + b) / 2;
-        if (level >= depth || Math.abs(at(mid) - (at(a) + at(b)) / 2) <= error) return;
+        if (level >= depth) return;
+        const ra = at(a);
+        const rb = at(b);
+        const deviation = Math.max(...[0.25, 0.5, 0.75].map((t) => Math.abs(at(a + (b - a) * t) - (ra + (rb - ra) * t))));
+        if (deviation <= error) return;
         split(a, mid, level + 1);
         out.push([mid, at(mid)]);
         split(mid, b, level + 1);
