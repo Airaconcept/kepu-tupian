@@ -10,7 +10,7 @@ You need:
 
 - **Node.js 20.10 or later.** Nothing to install: the kit, the build scripts and the checks use only Node's built-in modules.
 - **Google Chrome or Chromium** for the browser checks. The scripts find it in the usual places; otherwise set `CHROME_PATH` to the binary.
-- **Claude Code**, to try the skill itself.
+- **Claude Code or OpenCode**, to try the skill itself.
 
 ```sh
 git clone https://github.com/wheresryan22/anatomy.git
@@ -21,6 +21,12 @@ To use your working copy as the skill while you change it, link it into your per
 
 ```sh
 ln -s "$PWD" ~/.claude/skills/anatomy
+```
+
+For OpenCode:
+
+```sh
+ln -s "$PWD" ~/.config/opencode/skills/anatomy
 ```
 
 ## Building the examples
