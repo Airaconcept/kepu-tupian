@@ -25,6 +25,7 @@ jobs:
         with:
           node-version: 22
 
+
       - name: Dial indicator
         run: |
           node examples/dial-indicator/build.mjs
@@ -56,6 +57,9 @@ jobs:
         run: |
           node examples/raptor-engine/build.mjs
           node examples/raptor-engine/build.mjs --light
+
+      - name: Cut silhouette fidelity regressions
+        run: node --test scripts/fidelity-cut.test.mjs
 
       - name: Committed pages are unchanged
         run: |
