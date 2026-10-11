@@ -38,7 +38,7 @@ Fractions are 0..1 across the element.
                                           pass code for keys that share a name ("Shift" + "ShiftRight", "Enter" + "NumpadEnter")
   ["slow", factor]                        run the page's requestAnimationFrame and performance.now clock at factor x real
                                           time (0.05 = 20x slow motion) so sheets catch 100 ms events; ["slow", 1] restores it
-  ["until", js, timeoutMs?]               poll a JS expression until it is truthy (default 10 s), e.g. a readout reaching a phase
+  ["until", js, timeoutMs?]               poll a JS expression until it is truthy (default 10 s); a timeout stops the run with exit 1
   ["eval", js]                            run JS in the page and print the result
   ["shot", out.png, sel?, scale?, [x,y,w,h]?]           screenshot an element, or a region of it in CSS px
   ["lines", out.png?, sel?, options?]     check every texture line's two ends: each must land on a stroke, a dot or an outline
@@ -242,7 +242,7 @@ async function main() {
           }
           await sleep(25);
         }
-        if (!ok) console.log(`until: timed out waiting for ${args[0]}`);
+        if (!ok) throw new Error(`until: timed out waiting for ${args[0]}`);
       }
       else if (kind === "shot") {
         const [out, selector, scale, region] = args;

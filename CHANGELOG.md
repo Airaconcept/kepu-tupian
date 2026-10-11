@@ -15,6 +15,7 @@ All notable changes to Anatomy are recorded here. The format follows [Keep a Cha
 - `scripts/drive.mjs` now fails when a browser evaluation throws or rejects, rather than reporting a clean successful session.
 - The arcade cabinet now accepts coins with reduced motion enabled, preserving the meter, credit and power-on events when the coin animation is skipped.
 - The turning dial stops its idle tour when reduced motion is enabled while the page is open and cancels its pending automatic restart while preserving keyboard and pointer input.
+- `scripts/drive.mjs` now exits with status 1 and stops subsequent actions when an `until` condition times out.
 
 - `examples/test-rig/` drew its glass button dark in the light theme. `stretch.css` now has light values for its own colours.
 
