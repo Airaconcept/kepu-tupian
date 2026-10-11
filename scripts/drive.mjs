@@ -102,6 +102,11 @@ async function main() {
   }
   const [target, script] = rest;
   const actions = options.actions ?? JSON.parse(script ?? "[]");
+  const kinds = new Set(["scroll", "wait", "move", "click", "drag", "key", "slow", "until", "eval", "shot", "lines", "turn", "orbit", "sheet"]);
+  if (!Array.isArray(actions)) throw new Error("actions must be an array");
+  for (const action of actions) {
+    if (!Array.isArray(action) || !kinds.has(action[0])) throw new Error(`unknown action ${Array.isArray(action) ? action[0] : action}`);
+  }
   const url = /^https?:|^file:/.test(target) ? target : pathToFileURL(resolve(target)).href;
   const binary = chromePath();
   if (!binary) {
@@ -287,7 +292,7 @@ async function main() {
           console.log(`shot ${out}`);
         }
         failed += result.problems.length;
-      } else console.log(`unknown action ${kind}`);
+      }
     }
     console.log(problems.length ? problems.join("\n") : "console: clean");
     socket.close();

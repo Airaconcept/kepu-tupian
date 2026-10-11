@@ -25,6 +25,9 @@ jobs:
         with:
           node-version: 22
 
+      - name: Drive action regressions
+        run: node --test scripts/drive-actions.test.mjs
+
       - name: Dial indicator
         run: |
           node examples/dial-indicator/build.mjs
