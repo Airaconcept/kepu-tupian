@@ -25,6 +25,9 @@ jobs:
         with:
           node-version: 22
 
+      - name: Projection ray regressions
+        run: node --test scripts/audit-projection.test.mjs
+
       - name: Dial indicator
         run: |
           node examples/dial-indicator/build.mjs
