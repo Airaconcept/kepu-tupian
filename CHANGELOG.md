@@ -12,6 +12,8 @@ All notable changes to Anatomy are recorded here. The format follows [Keep a Cha
 
 ### Fixed
 
+- `scripts/drive.mjs` now exits with status 1 and stops subsequent actions when an `until` condition times out.
+
 - `examples/test-rig/` drew its glass button dark in the light theme. `stretch.css` now has light values for its own colours.
 
 ### Changed
