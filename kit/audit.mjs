@@ -669,7 +669,7 @@ export function orderKeys(items, overlaps, { gap = 0.02, rounds = 0 } = {}) {
     }
   }
   const rules = [...strongest.values()];
-  const limit = rounds || Math.min(items.length + 1, 400);
+  const limit = rounds || items.length + 1;
   const dropped = [];
   let keys = start.slice();
   let active = rules.slice();
@@ -705,7 +705,9 @@ export function orderKeys(items, overlaps, { gap = 0.02, rounds = 0 } = {}) {
         walk = by[walk].back;
       } while (walk !== node && loop.length <= items.length);
     }
-    const victim = (loop.length ? loop : active.filter((rule) => keys[rule.front] - keys[rule.back] < rule.need - 1e-9)).reduce((low, rule) => (rule.weight < low.weight ? rule : low));
+    const candidates = loop.length ? loop : active.filter((rule) => keys[rule.front] - keys[rule.back] < rule.need - 1e-9);
+    if (!candidates.length) break;
+    const victim = candidates.reduce((low, rule) => (rule.weight < low.weight ? rule : low));
     dropped.push(victim);
     active = active.filter((rule) => rule !== victim);
   }
