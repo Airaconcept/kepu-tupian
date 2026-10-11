@@ -883,6 +883,7 @@ export function clearances(tubes, solids, { ratio = 0.5, least = 0.2, spacing = 
   };
   const poseOf = new Map([...tubes, ...solids].map((shape) => [shape, placed(shape, state)]));
   const offsets = new Map([...tubes, ...solids].map((shape) => [shape, offsetAt(shape, state)]));
+  const widest = new Map(tubes.map((tube) => [tube, poseOf.get(tube).radii.reduce((r, next) => Math.max(r, next), 0)]));
   const together = (a, b) => len3(sub3(offsets.get(a), offsets.get(b))) < 0.05;
   const runsBy = new Map();
   for (const tube of tubes) runsBy.set(tube.owner, [...(runsBy.get(tube.owner) ?? []), tube]);
@@ -927,9 +928,9 @@ export function clearances(tubes, solids, { ratio = 0.5, least = 0.2, spacing = 
       if (matches(tube.touch, shape.name) || matches(shape.touch, tube.name)) continue;
       const other = poseOf.get(shape);
       const ob = boundsOf(other);
-      if (!overlaps(tb, ob, 4)) continue;
+      if (!overlaps(tb, ob, Math.max(4, gapOf(widest.get(tube))))) continue;
       for (const sample of samples) {
-        if (!overlaps({ min: sample.p, max: sample.p }, ob, sample.r + 3)) continue;
+        if (!overlaps({ min: sample.p, max: sample.p }, ob, sample.r + Math.max(3, gapOf(sample.r)))) continue;
         const gap = gapOf(sample.r);
         const clearance = clearanceTo(other, sample);
         if (clearance >= gap) continue;
@@ -947,10 +948,13 @@ export function clearances(tubes, solids, { ratio = 0.5, least = 0.2, spacing = 
       const tb = poseOf.get(tubes[b]);
       if (tubes[a].owner && tubes[a].owner === tubes[b].owner && tubes[a].joined) continue;
       if (matches(tubes[a].touch, tubes[b].name) || matches(tubes[b].touch, tubes[a].name)) continue;
-      if (!overlaps(boundsOf(ta), boundsOf(tb), 3)) continue;
       const bundled = tubes[a].bundle && tubes[a].bundle === tubes[b].bundle;
+      const widestB = widest.get(tubes[b]);
+      const envelope = bundled ? 3 : Math.max(3, gapOf(Math.min(widest.get(tubes[a]), widestB)));
+      if (!overlaps(boundsOf(ta), boundsOf(tb), envelope)) continue;
       for (const sample of samples) {
-        if (!overlaps({ min: sample.p, max: sample.p }, boundsOf(tb), sample.r + 3)) continue;
+        const envelope = bundled ? 3 : Math.max(3, gapOf(Math.min(sample.r, widestB)));
+        if (!overlaps({ min: sample.p, max: sample.p }, boundsOf(tb), sample.r + envelope)) continue;
         const clearance = sample.edge >= sample.r ? sdf(tb, sample.p) - sample.r : Math.min(...ringAround(sample, sample.r).map((q) => sdf(tb, q)));
         const r = centreline(tb, sample.p).r;
         const gap = bundled ? touching : gapOf(Math.min(sample.r, r));
