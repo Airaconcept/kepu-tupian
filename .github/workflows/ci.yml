@@ -25,6 +25,9 @@ jobs:
         with:
           node-version: 22
 
+      - name: Inflected profile regressions
+        run: node --test scripts/audit-profile.test.mjs
+
       - name: Dial indicator
         run: |
           node examples/dial-indicator/build.mjs
