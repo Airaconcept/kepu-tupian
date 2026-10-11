@@ -25,6 +25,9 @@ jobs:
         with:
           node-version: 22
 
+      - name: Browser driver regressions
+        run: node --test scripts/drive.test.mjs
+
       - name: Dial indicator
         run: |
           node examples/dial-indicator/build.mjs

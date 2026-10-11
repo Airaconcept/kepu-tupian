@@ -154,7 +154,13 @@ async function main() {
         pending.set(call, done);
         socket.send(JSON.stringify({ id: call, method, params }));
       });
-    const evaluate = async (expression) => (await send("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true })).result?.result?.value;
+    const evaluate = async (expression) => {
+      const reply = await send("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true });
+      if (reply.error) throw new Error(reply.error.message);
+      const exception = reply.result?.exceptionDetails;
+      if (exception) throw new Error(exception.exception?.description ?? exception.text);
+      return reply.result?.result?.value;
+    };
     const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
     await send("Runtime.enable");
     await send("Page.enable");
