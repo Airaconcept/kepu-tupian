@@ -13,6 +13,7 @@ All notable changes to Anatomy are recorded here. The format follows [Keep a Cha
 ### Fixed
 
 - `scripts/drive.mjs` now fails when a browser evaluation throws or rejects, rather than reporting a clean successful session.
+- The arcade cabinet now accepts coins with reduced motion enabled, preserving the meter, credit and power-on events when the coin animation is skipped.
 
 - `examples/test-rig/` drew its glass button dark in the light theme. `stretch.css` now has light values for its own colours.
 
