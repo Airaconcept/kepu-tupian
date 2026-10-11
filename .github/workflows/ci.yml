@@ -25,6 +25,9 @@ jobs:
         with:
           node-version: 22
 
+      - name: Capture regressions
+        run: node --test scripts/capture.test.mjs
+
       - name: Dial indicator
         run: |
           node examples/dial-indicator/build.mjs

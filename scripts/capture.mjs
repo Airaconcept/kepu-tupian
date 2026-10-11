@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
-import { existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 if (typeof WebSocket === "undefined" && !process.execArgv.includes("--experimental-websocket")) {
@@ -199,6 +199,7 @@ async function main() {
     }
     const shoot = async (path, clip, scale) => {
       const shot = await send("Page.captureScreenshot", { format: "png", captureBeyondViewport: true, clip: { ...clip, scale } });
+      mkdirSync(dirname(path), { recursive: true });
       writeFileSync(path, Buffer.from(shot.result.data, "base64"));
     };
     const clipOf = () => {
