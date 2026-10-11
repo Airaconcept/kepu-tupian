@@ -45,6 +45,8 @@ jobs:
         run: node --test scripts/orbit-sampling.test.mjs
       - name: Audit cache regressions
         run: node --test scripts/audit-cache.test.mjs
+      - name: Tapered audit regressions
+        run: node --test scripts/audit-taper.test.mjs
 
       - name: Dial indicator
         run: |

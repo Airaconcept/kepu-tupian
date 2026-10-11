@@ -133,7 +133,7 @@ function polygonDistance(poly, x, y) {
   return inside ? -d : d;
 }
 
-function cappedSegment(p, a, b, r) {
+function cappedSegment(p, a, b, r, endRadius = r) {
   const bx = b[0] - a[0];
   const by = b[1] - a[1];
   const bz = b[2] - a[2];
@@ -142,6 +142,12 @@ function cappedSegment(p, a, b, r) {
   const pz = p[2] - a[2];
   const baba = bx * bx + by * by + bz * bz || 1e-12;
   const paba = px * bx + py * by + pz * bz;
+  if (endRadius !== r) {
+    const length = Math.sqrt(baba);
+    const along = paba / length;
+    const radial = Math.hypot(px - bx * paba / baba, py - by * paba / baba, pz - bz * paba / baba);
+    return polyDistance([[0, 0], [0, r], [length, endRadius], [length, 0]], along, radial);
+  }
   const x = Math.hypot(px * baba - bx * paba, py * baba - by * paba, pz * baba - bz * paba) - r * baba;
   const y = Math.abs(paba - baba * 0.5) - baba * 0.5;
   const x2 = x * x;
@@ -201,8 +207,7 @@ function baseSdf(shape, p) {
   let best = BIG;
   const last = points.length - 1;
   for (let index = 0; index < last; index++) {
-    const r = (radii[index] + radii[index + 1]) / 2;
-    const d = cappedSegment(p, points[index], points[index + 1], r);
+    const d = cappedSegment(p, points[index], points[index + 1], radii[index], radii[index + 1]);
     if (d < best) best = d;
   }
   if (round[0]) best = Math.min(best, len3(sub3(p, points[0])) - radii[0]);
@@ -310,7 +315,7 @@ function tubeDistance(shape, p, segments) {
   const last = points.length - 1;
   let best = BIG;
   for (const index of segments) {
-    const d = cappedSegment(p, points[index], points[index + 1], (radii[index] + radii[index + 1]) / 2);
+    const d = cappedSegment(p, points[index], points[index + 1], radii[index], radii[index + 1]);
     if (d < best) best = d;
     for (const [joint, flag] of [[0, round[0]], [last, round[1]]]) {
       if (!flag || (joint !== index && joint !== index + 1)) continue;
