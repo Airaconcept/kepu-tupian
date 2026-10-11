@@ -25,6 +25,9 @@ jobs:
         with:
           node-version: 22
 
+      - name: Chrome startup regressions
+        run: node --test scripts/chrome-startup.test.mjs
+
       - name: Dial indicator
         run: |
           node examples/dial-indicator/build.mjs

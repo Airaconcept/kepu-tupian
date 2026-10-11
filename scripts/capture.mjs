@@ -1,3 +1,4 @@
+import { chromePort } from "./chrome-port.mjs";
 import { spawn } from "node:child_process";
 import { existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
@@ -110,18 +111,7 @@ async function main() {
     "--ignore-gpu-blocklist",
     "about:blank",
   ]);
-  const port = await new Promise((done, fail) => {
-    let text = "";
-    const timer = setTimeout(() => fail(new Error("Chrome did not start")), 20000);
-    chrome.stderr.on("data", (chunk) => {
-      text += chunk;
-      const match = text.match(/DevTools listening on ws:\/\/[^:]+:(\d+)\//);
-      if (match) {
-        clearTimeout(timer);
-        done(Number(match[1]));
-      }
-    });
-  });
+  const port = await chromePort(chrome, profile);
   const finish = (code) => {
     chrome.kill("SIGKILL");
     try {
