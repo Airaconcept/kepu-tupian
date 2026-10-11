@@ -1454,7 +1454,11 @@ const boxOfPoints = (points, m) => {
   return box;
 };
 const unionBox = (a, b) => (!a ? b : !b ? a : [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[2], b[2]), Math.max(a[3], b[3])]);
-const meetBox = (a, b) => (!a || !b ? a ?? null : [Math.max(a[0], b[0]), Math.max(a[1], b[1]), Math.min(a[2], b[2]), Math.min(a[3], b[3])]);
+const meetBox = (a, b) => {
+  if (!a || !b) return a ?? null;
+  const box = [Math.max(a[0], b[0]), Math.max(a[1], b[1]), Math.min(a[2], b[2]), Math.min(a[3], b[3])];
+  return box[0] <= box[2] && box[1] <= box[3] ? box : null;
+};
 const areaOf = (box) => (box ? Math.max(0, box[2] - box[0]) * Math.max(0, box[3] - box[1]) : 0);
 
 export function markupBox(svg) {
@@ -1463,7 +1467,9 @@ export function markupBox(svg) {
   let clipId = null;
   for (const [, close, tag, attrs, self] of tags) {
     if (tag === "clipPath" && !close) {
-      clipId = self ? null : (attrs.match(/id="([^"]*)"/) ?? [])[1] ?? null;
+      const id = (attrs.match(/id="([^"]*)"/) ?? [])[1] ?? null;
+      if (id) clips.set(id, null);
+      clipId = self ? null : id;
       continue;
     }
     if (clipId) {
@@ -1485,7 +1491,9 @@ export function markupBox(svg) {
     const m = multiply(top.m, matrixOf((attrs.match(/transform="([^"]*)"/) ?? [])[1]));
     const ref = (attrs.match(/clip-path="url\(#([^)]*)\)"/) ?? [])[1];
     const own = ref && clips.get(ref) ? boxOfPoints([[clips.get(ref)[0], clips.get(ref)[1]], [clips.get(ref)[2], clips.get(ref)[3]]], m) : null;
-    const frame = { m, clip: own ? meetBox(top.clip ?? own, own) : top.clip, skip: top.skip || ["defs", "clipPath", "mask", "linearGradient", "radialGradient", "pattern", "text", "title"].includes(tag) || /class="[^"]*iso-halo/.test(attrs) };
+    const clip = own ? meetBox(top.clip ?? own, own) : top.clip;
+    const empty = ref && clips.has(ref) && (!own || areaOf(own) === 0 || (top.clip && (!clip || areaOf(clip) === 0)));
+    const frame = { m, clip, skip: Boolean(empty) || top.skip || ["defs", "clipPath", "mask", "linearGradient", "radialGradient", "pattern", "text", "title"].includes(tag) || /class="[^"]*iso-halo/.test(attrs) };
     if (!frame.skip) {
       const shape = boxOfPoints(pointsOfShape(tag, attrs), m);
       if (shape) box = unionBox(box, frame.clip ? meetBox(shape, frame.clip) : shape);
