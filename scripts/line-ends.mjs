@@ -139,10 +139,19 @@ function lineEnds({ select = null, tolerance = 1, root: rootSlack = 2, mark = 7,
     const filled = cs.fill !== "none" && Number(cs.fillOpacity) > 0.05;
     if (tag === "circle" || tag === "ellipse") {
       if (!stroked && !filled) continue;
-      const c = map([Number(el.getAttribute("cx") || 0), Number(el.getAttribute("cy") || 0)]);
-      const r = Number(el.getAttribute("r") || el.getAttribute("rx") || 0) * Math.hypot(ctm.a, ctm.b);
-      const entry = { el, kind: "dot", c, r };
-      for (let gx = Math.floor((c[0] - r) / cell); gx <= Math.floor((c[0] + r) / cell); gx++) for (let gy = Math.floor((c[1] - r) / cell); gy <= Math.floor((c[1] + r) / cell); gy++) add(gx, gy, entry);
+      const cx = Number(el.getAttribute("cx") || 0);
+      const cy = Number(el.getAttribute("cy") || 0);
+      const rx = Number(el.getAttribute(tag === "circle" ? "r" : "rx") || 0);
+      const ry = Number(el.getAttribute(tag === "circle" ? "r" : "ry") || 0);
+      if (rx <= 0 || ry <= 0) continue;
+      const points = Array.from({ length: 128 }, (_, index) => {
+        const angle = index * Math.PI * 2 / 128;
+        return map([cx + rx * Math.cos(angle), cy + ry * Math.sin(angle)]);
+      });
+      const entry = { el, kind: "round", points, cx, cy, rx, ry, filled };
+      const xs = points.map(([x]) => x);
+      const ys = points.map(([, y]) => y);
+      for (let gx = Math.floor(Math.min(...xs) / cell); gx <= Math.floor(Math.max(...xs) / cell); gx++) for (let gy = Math.floor(Math.min(...ys) / cell); gy <= Math.floor(Math.max(...ys) / cell); gy++) add(gx, gy, entry);
       continue;
     }
     if (!stroked) continue;
@@ -196,8 +205,11 @@ function lineEnds({ select = null, tolerance = 1, root: rootSlack = 2, mark = 7,
     for (let i = 1; i < own.length; i++) along.push(along[i - 1] + Math.hypot(own[i][0] - own[i - 1][0], own[i][1] - own[i - 1][1]));
     const total = along[along.length - 1];
     for (const entry of near(p, reach * 4)) {
-      if (entry.kind === "dot") {
-        best = Math.min(best, Math.max(0, Math.hypot(p[0] - entry.c[0], p[1] - entry.c[1]) - entry.r));
+      if (entry.kind === "round") {
+        const local = inverse(entry.el, p);
+        const inside = ((local[0] - entry.cx) / entry.rx) ** 2 + ((local[1] - entry.cy) / entry.ry) ** 2 <= 1;
+        if (entry.filled && inside) best = 0;
+        else for (let index = 0; index < entry.points.length; index++) best = Math.min(best, segmentDistance(p, entry.points[index], entry.points[(index + 1) % entry.points.length]));
         continue;
       }
       if (entry.el === line.el && entry.sub === sub.index) {
