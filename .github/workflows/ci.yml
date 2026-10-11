@@ -33,6 +33,8 @@ jobs:
         run: node --test scripts/audit-order-convergence.test.mjs
       - name: Split ownership regressions
         run: node --test scripts/turn-split-owner.test.mjs
+      - name: Group reference regressions
+        run: node --test scripts/turn-group-reference.test.mjs
 
       - name: Dial indicator
         run: |
