@@ -39,6 +39,8 @@ jobs:
         run: node --test scripts/lines-round.test.mjs
       - name: Arc line root regressions
         run: node --test scripts/lines-arcs.test.mjs
+      - name: Navigation regressions
+        run: node --test scripts/navigation.test.mjs
 
       - name: Dial indicator
         run: |

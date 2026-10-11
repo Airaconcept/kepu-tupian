@@ -168,7 +168,9 @@ async function main() {
     const early = [SLOW, options.noWebgl ? NO_GL : "", options.preload ?? ""].filter(Boolean).join("\n");
     await send("Page.addScriptToEvaluateOnNewDocument", { source: early });
     await send("Emulation.setDeviceMetricsOverride", { width: options.width, height: options.height, deviceScaleFactor: options.scale, mobile: options.width < 600 });
-    await send("Page.navigate", { url });
+    const navigation = await send("Page.navigate", { url });
+    if (navigation.error) throw new Error(`Navigation failed: ${navigation.error.message}`);
+    if (navigation.result?.errorText) throw new Error(`Navigation failed: ${navigation.result.errorText}`);
     await sleep(1200);
     const boxOf = (selector) => evaluate(`(()=>{const el=document.querySelector(${JSON.stringify(selector ?? ".iso-plate")})||document.body;const r=el.getBoundingClientRect();return {x:r.left,y:r.top,w:r.width,h:r.height,sx:scrollX,sy:scrollY}})()`);
     const readout = () => evaluate(`(document.querySelector("[data-readout]")||{}).textContent||""`);

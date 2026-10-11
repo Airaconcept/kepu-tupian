@@ -22,6 +22,7 @@ All notable changes to Anatomy are recorded here. The format follows [Keep a Cha
 - Browser checks now fail promptly and remove their temporary profiles when Chrome exits before its debugging port is ready.
 - The line-end check now uses ellipse boundaries and transformed circle boundaries, and treats hollow interiors as empty instead of solid dots.
 - The line-end check now follows SVG arc curves instead of treating each arc as a straight chord.
+- Capture and drive now fail when Chrome cannot load the requested page, instead of reporting a clean browser error page.
 
 - `examples/test-rig/` drew its glass button dark in the light theme. `stretch.css` now has light values for its own colours.
 

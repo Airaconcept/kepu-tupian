@@ -153,7 +153,9 @@ async function main() {
     if (options.theme) features.push({ name: "prefers-color-scheme", value: options.theme });
     if (features.length) await send("Emulation.setEmulatedMedia", { features });
     await send("Emulation.setDeviceMetricsOverride", { width: options.width, height: options.height, deviceScaleFactor: options.scale, mobile: options.width < 600 });
-    await send("Page.navigate", { url });
+    const navigation = await send("Page.navigate", { url });
+    if (navigation.error) throw new Error(`Navigation failed: ${navigation.error.message}`);
+    if (navigation.result?.errorText) throw new Error(`Navigation failed: ${navigation.result.errorText}`);
     await sleep(Math.min(options.wait, 1500));
     await evaluate(`(async()=>{const h=document.documentElement.scrollHeight;for(let y=0;y<h;y+=400){scrollTo(0,y);await new Promise(r=>setTimeout(r,60))}scrollTo(0,0)})()`);
     await sleep(Math.max(0, options.wait - 1500));
