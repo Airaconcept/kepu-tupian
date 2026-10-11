@@ -1,3 +1,4 @@
+import { chromePort } from "./chrome-port.mjs";
 import { spawn } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
@@ -36,18 +37,7 @@ function chromePath() {
 async function browser(target, { width, height, scale, throttle, noWebgl }) {
   const profile = mkdtempSync(join(tmpdir(), "turn-check-"));
   const chrome = spawn(chromePath(), ["--headless=new", "--remote-debugging-port=0", `--user-data-dir=${profile}`, "--no-first-run", "--no-default-browser-check", "--hide-scrollbars", "--allow-file-access-from-files", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist", "about:blank"]);
-  const port = await new Promise((done, fail) => {
-    let text = "";
-    const timer = setTimeout(() => fail(new Error("Chrome did not start")), 20000);
-    chrome.stderr.on("data", (chunk) => {
-      text += chunk;
-      const match = text.match(/DevTools listening on ws:\/\/[^:]+:(\d+)\//);
-      if (match) {
-        clearTimeout(timer);
-        done(Number(match[1]));
-      }
-    });
-  });
+  const port = await chromePort(chrome, profile);
   const page = await (await fetch(`http://127.0.0.1:${port}/json/new?about:blank`, { method: "PUT" })).json();
   const socket = new WebSocket(page.webSocketDebuggerUrl);
   let id = 0;

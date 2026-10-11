@@ -19,6 +19,7 @@ All notable changes to Anatomy are recorded here. The format follows [Keep a Cha
 - `scripts/capture.mjs` now creates the output directory for screenshots, including nested paths under `shots/`.
 - The line-end check now includes the selected element when `--select` names an SVG, rather than checking only SVGs inside it.
 - `scripts/drive.mjs` now rejects unknown actions before running the session, so a misspelled verification step cannot report success.
+- Browser checks now fail promptly and remove their temporary profiles when Chrome exits before its debugging port is ready.
 
 - `examples/test-rig/` drew its glass button dark in the light theme. `stretch.css` now has light values for its own colours.
 
