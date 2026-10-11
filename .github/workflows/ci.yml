@@ -25,6 +25,9 @@ jobs:
         with:
           node-version: 22
 
+      - name: Split ownership regressions
+        run: node --test scripts/turn-split-owner.test.mjs
+
       - name: Dial indicator
         run: |
           node examples/dial-indicator/build.mjs
