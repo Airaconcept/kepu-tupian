@@ -70,6 +70,8 @@ jobs:
 
       - name: Cut silhouette fidelity regressions
         run: node --test scripts/fidelity-cut.test.mjs
+      - name: Tube silhouette coverage regressions
+        run: node --test scripts/fidelity-tube-coverage.test.mjs
 
       - name: Committed pages are unchanged
         run: |

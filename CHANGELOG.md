@@ -35,6 +35,7 @@ All notable changes to Anatomy are recorded here. The format follows [Keep a Cha
 - Splitting now accepts default fixed rounds and preserves explicit prism/round ownership, so a pipe fitting can be split without inventing collisions with its own pipe.
 - Turning builders now reject missing named part/parent groups and duplicate group names before authored motions silently become static or alias one value.
 - Native fidelity checks now compare complete filled silhouettes for cut parts and honor open round ends in the kit reference, preserving deliberately unstroked cut edges.
+- Tube fidelity checks path coverage in both directions when vertex counts differ, rejecting empty or truncated live silhouettes while preserving equivalent resampling.
 
 - `examples/test-rig/` drew its glass button dark in the light theme. `stretch.css` now has light values for its own colours.
 
