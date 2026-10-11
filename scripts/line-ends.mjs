@@ -45,7 +45,7 @@ function lineEnds({ select = null, tolerance = 1, root: rootSlack = 2, mark = 7,
         const u = 1 - t;
         push(u * u * u * x0 + 3 * u * u * t * x1 + 3 * u * t * t * x2 + t * t * t * px, u * u * u * y0 + 3 * u * u * t * y1 + 3 * u * t * t * y2 + t * t * t * py);
       }
-      control = [x2, y2];
+      control = { kind: "cubic", point: [x2, y2] };
     };
     const quad = (x1, y1, px, py) => {
       const x0 = x;
@@ -55,7 +55,7 @@ function lineEnds({ select = null, tolerance = 1, root: rootSlack = 2, mark = 7,
         const u = 1 - t;
         push(u * u * x0 + 2 * u * t * x1 + t * t * px, u * u * y0 + 2 * u * t * y1 + t * t * py);
       }
-      control = [x1, y1];
+      control = { kind: "quadratic", point: [x1, y1] };
     };
     for (const [, command, args] of d.matchAll(/([MmLlHhVvCcSsQqTtAaZz])([^MmLlHhVvCcSsQqTtAaZz]*)/g)) {
       const v = numbers(args);
@@ -86,13 +86,13 @@ function lineEnds({ select = null, tolerance = 1, root: rootSlack = 2, mark = 7,
       else if (C === "C") for (let i = 0; i + 5 < v.length; i += 6) cubic(v[i] + ox(), v[i + 1] + oy(), v[i + 2] + ox(), v[i + 3] + oy(), v[i + 4] + ox(), v[i + 5] + oy());
       else if (C === "S")
         for (let i = 0; i + 3 < v.length; i += 4) {
-          const reflected = control ? [2 * x - control[0], 2 * y - control[1]] : [x, y];
+          const reflected = control?.kind === "cubic" ? [2 * x - control.point[0], 2 * y - control.point[1]] : [x, y];
           cubic(reflected[0], reflected[1], v[i] + ox(), v[i + 1] + oy(), v[i + 2] + ox(), v[i + 3] + oy());
         }
       else if (C === "Q") for (let i = 0; i + 3 < v.length; i += 4) quad(v[i] + ox(), v[i + 1] + oy(), v[i + 2] + ox(), v[i + 3] + oy());
       else if (C === "T")
         for (let i = 0; i + 1 < v.length; i += 2) {
-          const reflected = control ? [2 * x - control[0], 2 * y - control[1]] : [x, y];
+          const reflected = control?.kind === "quadratic" ? [2 * x - control.point[0], 2 * y - control.point[1]] : [x, y];
           quad(reflected[0], reflected[1], v[i] + ox(), v[i + 1] + oy());
         }
       else if (C === "A") for (let i = 0; i + 6 < v.length; i += 7) push(v[i + 5] + ox(), v[i + 6] + oy());

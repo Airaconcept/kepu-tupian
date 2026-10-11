@@ -25,6 +25,9 @@ jobs:
         with:
           node-version: 22
 
+      - name: Bezier continuation regressions
+        run: node --test scripts/lines-bezier.test.mjs
+
       - name: Dial indicator
         run: |
           node examples/dial-indicator/build.mjs
