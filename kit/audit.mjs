@@ -329,9 +329,9 @@ function tubeDistance(shape, p, segments) {
 
 function bodyDepth(shape, c, V, eps) {
   const { F, poly } = shape;
-  if (!shape._f) {
+  if (!shape._f || shape._f.view.some((value, index) => value !== V[index])) {
     const s = poly.map(([value]) => value);
-    shape._f = { aV: dot3(F.a, V), uV: dot3(F.u, V), vV: dot3(F.v, V), s0: Math.min(...s), s1: Math.max(...s), rm: Math.max(...poly.map(([, r]) => r)) };
+    shape._f = { view: [...V], aV: dot3(F.a, V), uV: dot3(F.u, V), vV: dot3(F.v, V), s0: Math.min(...s), s1: Math.max(...s), rm: Math.max(...poly.map(([, r]) => r)) };
   }
   const { aV, uV, vV, s0, s1, rm } = shape._f;
   const q = [c[0] - F.o[0], c[1] - F.o[1], c[2] - F.o[2]];

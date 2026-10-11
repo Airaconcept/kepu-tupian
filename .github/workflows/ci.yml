@@ -53,6 +53,8 @@ jobs:
         run: node --test scripts/enter-key.test.mjs
       - name: Closed path audit regressions
         run: node --test scripts/audit-path-origin.test.mjs
+      - name: Projection ray regressions
+        run: node --test scripts/audit-projection.test.mjs
 
       - name: Dial indicator
         run: |
