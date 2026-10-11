@@ -25,6 +25,9 @@ jobs:
         with:
           node-version: 22
 
+      - name: Native affine SVG bounds
+        run: node --test scripts/audit-affine-bounds.test.mjs
+
       - name: Dial indicator
         run: |
           node examples/dial-indicator/build.mjs
