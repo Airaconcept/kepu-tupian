@@ -27,6 +27,8 @@ jobs:
 
       - name: Browser driver regressions
         run: node --test scripts/drive.test.mjs
+      - name: Capture regressions
+        run: node --test scripts/capture.test.mjs
 
       - name: Dial indicator
         run: |
