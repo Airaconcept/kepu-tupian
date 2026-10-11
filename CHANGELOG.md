@@ -26,6 +26,7 @@ All notable changes to Anatomy are recorded here. The format follows [Keep a Cha
 - Orbit checks reject invalid sampling steps and empty pose lists before a zero-state sweep can pass.
 - Solid clearance audits rebuild cached surface grids when sampling spacing or cell size changes.
 - Tube geometry audits use tapered radii instead of replacing every segment with an averaged cylinder.
+- The line verifier reflects smooth Bezier controls only after the matching curve family.
 
 - `examples/test-rig/` drew its glass button dark in the light theme. `stretch.css` now has light values for its own colours.
 

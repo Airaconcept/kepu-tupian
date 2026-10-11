@@ -47,6 +47,8 @@ jobs:
         run: node --test scripts/audit-cache.test.mjs
       - name: Tapered audit regressions
         run: node --test scripts/audit-taper.test.mjs
+      - name: Bezier continuation regressions
+        run: node --test scripts/lines-bezier.test.mjs
 
       - name: Dial indicator
         run: |
