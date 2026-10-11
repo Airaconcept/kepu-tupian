@@ -30,7 +30,6 @@ All notable changes to Anatomy are recorded here. The format follows [Keep a Cha
 - Capture and drive send native Enter activation so button and form checks perform their default action.
 - Fixed-part and coverage bounds restore a closed SVG subpath origin before relative moves.
 - Audit ray casts now refresh body camera coefficients when the projection direction changes, so repeated builds retain the correct depth order.
-
 - `examples/test-rig/` drew its glass button dark in the light theme. `stretch.css` now has light values for its own colours.
 
 ### Changed

@@ -25,36 +25,8 @@ jobs:
         with:
           node-version: 22
 
-      - name: Browser driver regressions
-        run: node --test scripts/drive.test.mjs
-      - name: Capture regressions
-        run: node --test scripts/capture.test.mjs
-      - name: Line check regressions
-        run: node --test scripts/lines.test.mjs
-      - name: Drive action regressions
-        run: node --test scripts/drive-actions.test.mjs
-      - name: Chrome startup regressions
-        run: node --test scripts/chrome-startup.test.mjs
-      - name: Round line root regressions
-        run: node --test scripts/lines-round.test.mjs
-      - name: Arc line root regressions
-        run: node --test scripts/lines-arcs.test.mjs
-      - name: Navigation regressions
-        run: node --test scripts/navigation.test.mjs
-      - name: Orbit sampling regressions
-        run: node --test scripts/orbit-sampling.test.mjs
-      - name: Audit cache regressions
-        run: node --test scripts/audit-cache.test.mjs
-      - name: Tapered audit regressions
-        run: node --test scripts/audit-taper.test.mjs
-      - name: Bezier continuation regressions
-        run: node --test scripts/lines-bezier.test.mjs
-      - name: Enter key regressions
-        run: node --test scripts/enter-key.test.mjs
-      - name: Closed path audit regressions
-        run: node --test scripts/audit-path-origin.test.mjs
-      - name: Projection ray regressions
-        run: node --test scripts/audit-projection.test.mjs
+      - name: Regression tests
+        run: node --test scripts/*.test.mjs
 
       - name: Dial indicator
         run: |
