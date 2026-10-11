@@ -68,6 +68,9 @@ jobs:
           node examples/raptor-engine/build.mjs
           node examples/raptor-engine/build.mjs --light
 
+      - name: Cut silhouette fidelity regressions
+        run: node --test scripts/fidelity-cut.test.mjs
+
       - name: Committed pages are unchanged
         run: |
           git status --short
