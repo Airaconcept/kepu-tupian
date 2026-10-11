@@ -29,6 +29,8 @@ jobs:
         run: node --test scripts/drive.test.mjs
       - name: Capture regressions
         run: node --test scripts/capture.test.mjs
+      - name: Line check regressions
+        run: node --test scripts/lines.test.mjs
 
       - name: Dial indicator
         run: |
