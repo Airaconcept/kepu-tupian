@@ -31,6 +31,8 @@ jobs:
         run: node --test scripts/audit-profile.test.mjs
       - name: Depth key convergence regressions
         run: node --test scripts/audit-order-convergence.test.mjs
+      - name: Split ownership regressions
+        run: node --test scripts/turn-split-owner.test.mjs
 
       - name: Dial indicator
         run: |

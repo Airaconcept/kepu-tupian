@@ -32,6 +32,7 @@ All notable changes to Anatomy are recorded here. The format follows [Keep a Cha
 - Audit ray casts now refresh body camera coefficients when the projection direction changes, so repeated builds retain the correct depth order.
 - Audit profile tracing now checks quarter-span deviations, preserving inflected analytic and smooth profiles whose midpoint lies on their chord.
 - Depth-key solving now allows large acyclic figures to converge beyond 400 rounds and avoids choosing a cycle victim from an empty set of violated rules.
+- Splitting now accepts default fixed rounds and preserves explicit prism/round ownership, so a pipe fitting can be split without inventing collisions with its own pipe.
 
 - `examples/test-rig/` drew its glass button dark in the light theme. `stretch.css` now has light values for its own colours.
 

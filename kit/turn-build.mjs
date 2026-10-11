@@ -674,7 +674,7 @@ export function turning(P, { recorder = null, scale = 1 } = {}) {
     if (part.kind === "prism") {
       const { F, ring, s0, s1 } = part.world;
       const along = dot3(N, F.a);
-      const base = { name: part.name, group: part.group, layer: part.layer, tone: part.tone, crease: part.crease, lit: part.lit, material: part.material, details: { ...part.details }, bevel: part.spec.bevel };
+      const base = { name: part.name, owner: part.owner, group: part.group, layer: part.layer, tone: part.tone, crease: part.crease, lit: part.lit, material: part.material, details: { ...part.details }, bevel: part.spec.bevel };
       let halves;
       if (Math.abs(Math.abs(along) - 1) < 1e-6) {
         const sCut = (d - dot3(N, F.o)) / along;
@@ -713,8 +713,8 @@ export function turning(P, { recorder = null, scale = 1 } = {}) {
       drop(part);
       return made;
     }
-    if (part.kind === "round") {
-      const { F, s0, s1, r0, r1, ends } = part.world;
+    if (part.kind === "round" || (part.kind === "fixed" && part.round)) {
+      const { F, s0, s1, r0, r1, ends } = part.round ?? part.world;
       const along = dot3(N, F.a);
       if (Math.abs(Math.abs(along) - 1) > 1e-6) throw new Error(`turning: a round can only be split across its axis (${part.name})`);
       const sCut = (d - dot3(N, F.o)) / along;
@@ -722,7 +722,7 @@ export function turning(P, { recorder = null, scale = 1 } = {}) {
       const rAt = r0 + ((r1 - r0) * (sCut - s0)) / (s1 - s0);
       part.dead = true;
       if (T.R) T.R.solids.splice(T.R.solids.indexOf(part.shapes[0]), 1);
-      const base = { group: part.group, layer: part.layer, tone: part.tone, crease: part.crease, lit: part.lit, material: part.material, F, fixed: false };
+      const base = { owner: part.owner, group: part.group, layer: part.layer, tone: part.tone, crease: part.crease, lit: part.lit, material: part.material, F, fixed: false };
       const made = [
         T.round({ ...base, name: `${part.name}.a`, s0, s1: sCut, r: [r0, rAt], ends: [ends[0], "open"], details: part.details }),
         T.round({ ...base, name: `${part.name}.b`, s0: sCut, s1, r: [rAt, r1], ends: ["open", ends[1]] }),
