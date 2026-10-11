@@ -25,6 +25,9 @@ jobs:
         with:
           node-version: 22
 
+      - name: Audit cache regressions
+        run: node --test scripts/audit-cache.test.mjs
+
       - name: Dial indicator
         run: |
           node examples/dial-indicator/build.mjs

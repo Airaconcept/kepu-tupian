@@ -1567,7 +1567,10 @@ export function solidClearances(solids, { state, sunk = 0.5, spacing = 0.6, cell
   if (!solidClearances.cache) solidClearances.cache = new WeakMap();
   const cache = solidClearances.cache;
   const gridOf = (shape) => {
-    let grid = cache.get(shape);
+    let samples = cache.get(shape);
+    if (!samples) cache.set(shape, samples = new Map());
+    const key = `${spacing}:${cell}`;
+    let grid = samples.get(key);
     if (grid) return grid;
     grid = new Map();
     for (const p of surfaceOf(shape, spacing)) {
@@ -1575,7 +1578,7 @@ export function solidClearances(solids, { state, sunk = 0.5, spacing = 0.6, cell
       if (!grid.has(key)) grid.set(key, []);
       grid.get(key).push(p);
     }
-    cache.set(shape, grid);
+    samples.set(key, grid);
     return grid;
   };
   const pointsIn = (shape, box) => {
