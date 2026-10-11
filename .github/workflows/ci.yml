@@ -35,6 +35,8 @@ jobs:
         run: node --test scripts/drive-actions.test.mjs
       - name: Chrome startup regressions
         run: node --test scripts/chrome-startup.test.mjs
+      - name: Round line root regressions
+        run: node --test scripts/lines-round.test.mjs
 
       - name: Dial indicator
         run: |
