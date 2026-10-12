@@ -3,6 +3,7 @@ import { cpSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, re
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { fingerprintOfSkill } from "./fingerprint.mjs";
+import { describe, fromThisSession, parseMinutes, parseTokens } from "./session.mjs";
 
 const SKILL = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const SOURCE_TYPES = [".mjs", ".js", ".css", ".html", ".json", ".md", ".txt", ".svg"];
@@ -19,12 +20,16 @@ function usage(message) {
   console.log(`Copy a figure into a local clone of the community gallery, ready for a pull request.
 
   node scripts/publish.mjs <figure folder> --into <anatomy-community clone> --id <kebab-id> --title "..." --prompt "..." --author <github user>
-      [--agent "Claude Code"|OpenCode|Codex|Other] [--model "..."] [--license MIT|CC-BY-4.0] [--tags a,b]
+      [--agent "Claude Code"|OpenCode|Codex|Other] [--model "..."] [--minutes 45] [--tokens 1.2M] [--no-session]
+      [--license MIT|CC-BY-4.0] [--tags a,b]
       [--build build.mjs] [--pages a.html,b.html] [--kind "SVG + WebGL"] [--audit] [--no-preview] [--force]
       [--submit [--yes] [--dry-run] [--upstream owner/repo]]
 
 The figure must be plain HTML: a build script that writes standalone pages next to itself, in any theme.
 Only the source is copied, to figures/<author>/<id>/: the gallery's CI builds the pages and the poster.
+In Claude Code, the time to make and the tokens spent are read from this session's own log (from the request that
+made the figure up to the request to publish it, with idle gaps over 10 minutes left out); --minutes and --tokens
+override them, and --no-session leaves them out. Other agents pass them if they know them.
 Without --submit nothing is pushed: the command prints the git and gh commands to run when you are ready.
 With --submit it also sends the figure as a pull request, using the GitHub CLI (gh): it shows the plan and asks
 first (--yes skips the question, --dry-run only shows the plan). People who can push to the gallery get a branch
@@ -45,6 +50,13 @@ function parse(argv) {
     else if (["--into", "--id", "--title", "--prompt", "--author", "--agent", "--model", "--license", "--build", "--kind", "--date"].includes(arg)) options[arg.slice(2)] = take(index++);
     else if (arg === "--tags") options.tags = take(index++).split(",").map((tag) => tag.trim()).filter(Boolean);
     else if (arg === "--pages") options.pages = take(index++).split(",").map((page) => page.trim());
+    else if (arg === "--minutes") {
+      options.minutes = parseMinutes(take(index++));
+      if (!options.minutes) usage("--minutes takes a duration like 45, 45m, 2h or 1h30m");
+    } else if (arg === "--tokens") {
+      options.tokens = parseTokens(take(index++));
+      if (!options.tokens) usage("--tokens takes a count like 380000, 450k or 1.2M");
+    } else if (arg === "--no-session") options.noSession = true;
     else if (arg === "--audit") options.audit = true;
     else if (arg === "--force") options.force = true;
     else if (arg === "--no-preview") options.noPreview = true;
@@ -187,6 +199,10 @@ export function publish(options) {
     preview = join(shots, "preview.png");
     run([join(SKILL, "scripts", "capture.mjs"), join(dest, "src", lightPage ?? Object.values(pages)[0]), "--reduced", "--width", "1200", "--out", preview], dest);
   }
+  const measured = options.noSession || (options.minutes && options.tokens) ? null : fromThisSession({ prompt: options.prompt });
+  const minutes = options.minutes ?? measured?.minutes;
+  const tokens = options.tokens ?? measured?.tokens;
+  if (measured) log(`time and tokens from this session: ${describe(measured)}`);
   const pageText = Object.values(pages).filter(Boolean).map((page) => readFileSync(join(dest, "src", page), "utf8")).join("\n");
   for (const page of outputs) rmSync(join(dest, "src", page), { force: true });
   const figure = {
@@ -197,6 +213,8 @@ export function publish(options) {
     kind: options.kind ?? detectKind(pageText),
     agent: options.agent,
     ...(options.model ? { model: options.model } : {}),
+    ...(minutes ? { minutes } : {}),
+    ...(tokens ? { tokens } : {}),
     skill: { kit },
     build,
     pages: Object.fromEntries(Object.entries(pages).filter(([, page]) => page).map(([key, page]) => [key, `src/${page}`])),
@@ -208,7 +226,7 @@ export function publish(options) {
   };
   writeFileSync(join(dest, "figure.json"), JSON.stringify(figure, null, 2) + "\n");
 
-  return { dest, figure, skipped, linked, preview };
+  return { dest, figure, skipped, linked, preview, measured };
 }
 
 export function submitPlan({ login, canPush, upstream, author, id, title }) {
@@ -252,6 +270,11 @@ async function submit(options) {
   const plan = submitPlan({ login, canPush: perm.stdout.trim() === "true", upstream: options.upstream, author, id: options.id, title: options.title.trim() });
   console.log(`\nSubmitting as @${login}:`);
   for (const step of plan.steps) if (step.say) console.log(`  · ${step.say}`);
+  if (!options.noSession && !(options.minutes && options.tokens)) {
+    const measured = fromThisSession({ prompt: options.prompt });
+    const shown = { minutes: options.minutes ?? measured?.minutes, tokens: options.tokens ?? measured?.tokens };
+    console.log(shown.minutes && shown.tokens ? `  · record ${describe(shown)} to make it${measured ? " (read from this session)" : ""}` : "  · no time or token count (not run inside Claude Code; pass --minutes and --tokens to add them)");
+  } else if (options.minutes || options.tokens) console.log(`  · record${options.minutes ? ` ${options.minutes} min` : ""}${options.tokens ? ` ${options.tokens} tokens` : ""}`);
   console.log(`  (in ${repo})`);
   if (options.dryRun) return console.log("\ndry run: nothing was done");
   if (!options.yes && !(await confirm("\nGo ahead? [y/N] "))) throw new Error("not submitted (answer y, or pass --yes after asking)");
@@ -288,6 +311,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     const { dest, figure, skipped, linked, preview } = publish({ ...options, log: (line) => console.log(`  ${line}`) });
     const repo = resolve(options.into);
     console.log(`published figures/${figure.author.toLowerCase()}/${figure.id} (${figure.kind}, kit ${figure.skill.kit.slice(7, 19)}): source only, the gallery builds the pages`);
+    if (figure.minutes && figure.tokens) console.log(`  made in ${describe(figure)}`);
     if (skipped.length) console.log(`  left out (not a source type): ${skipped.join(", ")}`);
     console.log(`  .skill link: ${linked}`);
     if (preview) console.log(`  preview: ${preview} (not committed; CI makes the real one)`);
