@@ -303,7 +303,7 @@ anatomy/
 
 ## Share a figure
 
-Made something good? Ask your agent to publish it to the community gallery, [anatomy-community](https://github.com/wheresryan22/anatomy-community), or run `scripts/publish.mjs` yourself. It prepares the figure in your clone of the gallery and prints the commands to open a pull request; it never pushes for you. The gallery's own [CONTRIBUTING.md](https://github.com/wheresryan22/anatomy-community/blob/main/CONTRIBUTING.md) has the steps.
+Made something good? Ask your agent to *"publish this figure to the Anatomy community gallery"*. It asks for a title and your GitHub name, shows what it will send, and after your yes opens a pull request on [anatomy-community](https://github.com/wheresryan22/anatomy-community) for you: no git, no forking by hand. Or run `scripts/publish.mjs --submit` yourself. Without a terminal, use the gallery's **Submit a figure** form with a GitHub Gist.
 
 ## Contributing
 

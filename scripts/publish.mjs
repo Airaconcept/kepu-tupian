@@ -20,16 +20,20 @@ function usage(message) {
 
   node scripts/publish.mjs <figure folder> --into <anatomy-community clone> --id <kebab-id> --title "..." --prompt "..." --author <github user>
       [--agent "Claude Code"|OpenCode|Codex|Other] [--model "..."] [--license MIT|CC-BY-4.0] [--tags a,b]
-      [--build build.mjs] [--pages dark.html,light.html] [--kind "SVG + WebGL"] [--audit] [--no-preview] [--force]
+      [--build build.mjs] [--pages a.html,b.html] [--kind "SVG + WebGL"] [--audit] [--no-preview] [--force]
+      [--submit [--yes] [--dry-run] [--upstream owner/repo]]
 
-The figure must be plain HTML: a build script that writes standalone pages next to itself, with a light page.
+The figure must be plain HTML: a build script that writes standalone pages next to itself, in any theme.
 Only the source is copied, to figures/<author>/<id>/: the gallery's CI builds the pages and the poster.
-Nothing is pushed: the command prints the git and gh commands to run when you are ready.`);
+Without --submit nothing is pushed: the command prints the git and gh commands to run when you are ready.
+With --submit it also sends the figure as a pull request, using the GitHub CLI (gh): it shows the plan and asks
+first (--yes skips the question, --dry-run only shows the plan). People who can push to the gallery get a branch
+there; everyone else gets a fork, made for them.`);
   process.exit(message ? 1 : 0);
 }
 
 function parse(argv) {
-  const options = { agent: "Claude Code", license: "MIT", build: "build.mjs", tags: [] };
+  const options = { agent: "Claude Code", license: "MIT", build: "build.mjs", tags: [], upstream: "wheresryan22/anatomy-community" };
   const take = (index) => {
     const value = argv[index + 1];
     if (value === undefined || value.startsWith("--")) usage(`${argv[index]} needs a value`);
@@ -44,6 +48,10 @@ function parse(argv) {
     else if (arg === "--audit") options.audit = true;
     else if (arg === "--force") options.force = true;
     else if (arg === "--no-preview") options.noPreview = true;
+    else if (arg === "--submit") options.submit = true;
+    else if (arg === "--yes") options.yes = true;
+    else if (arg === "--dry-run") options.dryRun = true;
+    else if (arg === "--upstream") options.upstream = take(index++);
     else if (arg.startsWith("--")) usage(`unknown option ${arg}`);
     else if (!options.source) options.source = arg;
     else usage(`unexpected argument ${arg}`);
@@ -68,17 +76,21 @@ function listFiles(root, dir = root, out = []) {
 }
 
 function detectPages(source, files, given) {
-  if (given) {
-    const [dark, light] = given;
-    return { dark: dark || undefined, light: light || undefined };
-  }
   const html = files.filter((file) => !file.includes("/") && file.endsWith(".html"));
+  if (given) {
+    const named = given.filter(Boolean);
+    const pages = {};
+    for (const page of named) pages[themeOf(source, page) === "light" ? "light" : themeOf(source, page) === "dark" ? "dark" : page.replace(/\.html$/, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 24)] = page;
+    return pages;
+  }
   const pairs = html.filter((file) => !file.endsWith("-light.html") && html.includes(file.replace(/\.html$/, "-light.html")));
-  if (pairs.length === 1) return { dark: pairs[0], light: pairs[0].replace(/\.html$/, "-light.html") };
-  const singles = html.filter((file) => !/-(light|verify)\.html$/.test(file));
-  if (!pairs.length && singles.length === 1) return { dark: singles[0] };
-  throw new Error(`can't tell which pages are the figure (found: ${html.join(", ") || "none"}); pass --pages dark.html,light.html`);
+  if (pairs.length === 1) return { light: pairs[0].replace(/\.html$/, "-light.html"), dark: pairs[0] };
+  const singles = html.filter((file) => !/-verify(?:-light)?\.html$/.test(file) && !/^turning-stress/.test(file));
+  if (!pairs.length && singles.length === 1) return { [themeOf(source, singles[0]) === "light" ? "light" : "page"]: singles[0] };
+  throw new Error(`can't tell which pages are the figure (found: ${html.join(", ") || "none"}); pass --pages a.html,b.html`);
 }
+
+const themeOf = (source, page) => (readFileSync(join(source, page), "utf8").match(/<body[^>]*\bdata-theme="([a-z-]+)"/) ?? [])[1] ?? "";
 
 function detectKind(text) {
   const webgl = /getContext\(\s*["']webgl2?["']|\bGLSL_ISO\b|\bglLayer\b/.test(text);
@@ -127,11 +139,8 @@ export function publish(options) {
   const all = listFiles(source);
   const typed = all.filter((file) => SOURCE_TYPES.includes(extname(file).toLowerCase()));
   const pages = detectPages(source, typed, options.pages);
+  const lightPage = pages.light ?? null;
   for (const page of Object.values(pages)) if (page && !typed.includes(page)) throw new Error(`page ${page} not found in ${source}; build the figure first`);
-  const themeOf = (page) => (readFileSync(join(source, page), "utf8").match(/<body[^>]*\bdata-theme="(light|dark)"/) ?? [])[1] ?? "dark";
-  if (pages.dark && !pages.light && themeOf(pages.dark) === "light") [pages.light, pages.dark] = [pages.dark, undefined];
-  if (!pages.light) throw new Error("the gallery shows figures in the light theme: build the light page too (node build.mjs --light), then publish again");
-  for (const [key, page] of Object.entries(pages)) if (page && themeOf(page) !== key) throw new Error(`${page} is a ${themeOf(page)} page, not ${key}; pass --pages dark.html,light.html in that order`);
   const outputs = new Set(Object.values(pages).filter(Boolean));
   const files = typed.filter((file) => !outputs.has(file) && !/-verify(?:-light)?\.html$/.test(file));
   const skipped = all.filter((file) => !files.includes(file) && !outputs.has(file));
@@ -163,19 +172,20 @@ export function publish(options) {
     throw new Error(`${repo}/.skill (${where}) is a different kit version than this skill; remove it and run again`);
   }
 
-  const build = [[`src/${options.build}`, "--light"]];
-  if (pages.dark) build.push([`src/${options.build}`]);
+  const build = [];
+  if (pages.light) build.push([`src/${options.build}`, "--light"]);
+  if (Object.keys(pages).some((name) => name !== "light")) build.push([`src/${options.build}`]);
   for (const command of build) {
-    log(`building the ${command.includes("--light") ? "light" : "dark"} page (heavy figures take a minute or two)…`);
+    log(`building ${command.includes("--light") ? "the light page" : "the page"} (heavy figures take a minute or two)…`);
     run(command, dest);
   }
   let preview = null;
   if (!options.noPreview) {
-    log("taking a preview of the light page…");
+    log("taking a preview…");
     const shots = join(repo, "shots", `${author.toLowerCase()}-${options.id}`);
     mkdirSync(shots, { recursive: true });
     preview = join(shots, "preview.png");
-    run([join(SKILL, "scripts", "capture.mjs"), join(dest, "src", pages.light), "--reduced", "--width", "1200", "--out", preview], dest);
+    run([join(SKILL, "scripts", "capture.mjs"), join(dest, "src", lightPage ?? Object.values(pages)[0]), "--reduced", "--width", "1200", "--out", preview], dest);
   }
   const pageText = Object.values(pages).filter(Boolean).map((page) => readFileSync(join(dest, "src", page), "utf8")).join("\n");
   for (const page of outputs) rmSync(join(dest, "src", page), { force: true });
@@ -190,6 +200,7 @@ export function publish(options) {
     skill: { kit },
     build,
     pages: Object.fromEntries(Object.entries(pages).filter(([, page]) => page).map(([key, page]) => [key, `src/${page}`])),
+    preview: lightPage ? "light" : Object.keys(pages)[0],
     ...(options.audit ? { audit: true } : {}),
     license: options.license,
     ...(options.tags.length ? { tags: options.tags } : {}),
@@ -200,9 +211,76 @@ export function publish(options) {
   return { dest, figure, skipped, linked, preview };
 }
 
+export function submitPlan({ login, canPush, upstream, author, id, title }) {
+  const name = upstream.split("/")[1];
+  const target = canPush ? upstream : `${login}/${name}`;
+  const folder = `figures/${author.toLowerCase()}/${id}`;
+  const branch = `figure/${id}`;
+  const steps = [
+    ...(canPush ? [] : [{ say: `make (or reuse) your fork, ${target}`, gh: ["repo", "fork", upstream, "--clone=false", "--remote=false"] }]),
+    { say: "let git use your GitHub CLI login", gh: ["auth", "setup-git"] },
+    { say: `start ${branch} from the gallery's latest main`, git: ["fetch", "--quiet", `https://github.com/${upstream}.git`, "main"] },
+    { git: ["switch", "--quiet", "-C", branch, "FETCH_HEAD"] },
+    { say: `add ${folder} and nothing else`, publish: true },
+    { git: ["add", "--", folder] },
+    { git: ["commit", "--quiet", "-m", `Add ${title}`, "--", folder] },
+    { say: `push it to ${target}`, git: ["push", "--quiet", "--force", `https://github.com/${target}.git`, `HEAD:refs/heads/${branch}`] },
+    { say: `open the pull request on ${upstream}`, pr: { repo: upstream, head: canPush ? branch : `${login}:${branch}`, title: `Add ${title}` } },
+  ];
+  return { target, branch, folder, steps };
+}
+
+async function confirm(question) {
+  if (!process.stdin.isTTY) return false;
+  const { createInterface } = await import("node:readline/promises");
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  const answer = await rl.question(question);
+  rl.close();
+  return /^y(es)?$/i.test(answer.trim());
+}
+
+async function submit(options) {
+  const gh = (args) => spawnSync("gh", args, { encoding: "utf8" });
+  const repo = resolve(options.into);
+  const who = gh(["api", "user", "--jq", ".login"]);
+  if (who.error || who.status !== 0) throw new Error("--submit needs the GitHub CLI, signed in: install it from https://cli.github.com and run gh auth login");
+  const login = who.stdout.trim();
+  const author = options.author.replace(/^@/, "");
+  if (login.toLowerCase() !== author.toLowerCase()) throw new Error(`you're signed in to GitHub as ${login}, but --author is ${author}; they must match`);
+  const perm = gh(["api", `repos/${options.upstream}`, "--jq", ".permissions.push"]);
+  if (perm.status !== 0) throw new Error(`can't see ${options.upstream} with your GitHub login`);
+  const plan = submitPlan({ login, canPush: perm.stdout.trim() === "true", upstream: options.upstream, author, id: options.id, title: options.title.trim() });
+  console.log(`\nSubmitting as @${login}:`);
+  for (const step of plan.steps) if (step.say) console.log(`  · ${step.say}`);
+  console.log(`  (in ${repo})`);
+  if (options.dryRun) return console.log("\ndry run: nothing was done");
+  if (!options.yes && !(await confirm("\nGo ahead? [y/N] "))) throw new Error("not submitted (answer y, or pass --yes after asking)");
+  const run = (tool, args) => {
+    const result = spawnSync(tool, args, { cwd: repo, encoding: "utf8" });
+    if (result.status !== 0) throw new Error(`${tool} ${args.slice(0, 2).join(" ")} failed:\n${`${result.stdout}${result.stderr}`.trim()}`);
+    return result.stdout.trim();
+  };
+  let published;
+  for (const step of plan.steps) {
+    if (step.gh) run("gh", step.gh);
+    if (step.git) run("git", step.git);
+    if (step.publish) published = publish({ ...options, log: (line) => console.log(`  ${line}`) });
+    if (step.pr) {
+      const open = gh(["pr", "list", "--repo", step.pr.repo, "--head", plan.branch, "--state", "open", "--json", "url", "--jq", ".[0].url"]).stdout.trim();
+      const url = open || run("gh", ["pr", "create", "--repo", step.pr.repo, "--base", "main", "--head", step.pr.head, "--title", step.pr.title, "--body", `${published.figure.prompt}\n\nPublished with Anatomy's publish.mjs.`]);
+      console.log(`\nSubmitted: ${url}\nThe checks run there, and a preview of your figure appears on it when they finish.`);
+    }
+  }
+}
+
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const options = parse(process.argv.slice(2));
-  try {
+  if (options.submit) {
+    submit(options).catch((error) => {
+      console.error(`publish: ${error.message}`);
+      process.exit(1);
+    });
+  } else try {
     console.log(`publishing ${options.id}…`);
     const { dest, figure, skipped, linked, preview } = publish({ ...options, log: (line) => console.log(`  ${line}`) });
     const repo = resolve(options.into);

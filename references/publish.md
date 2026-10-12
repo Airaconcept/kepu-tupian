@@ -1,31 +1,34 @@
 # Publishing a figure to the community gallery
 
-The community gallery is the repository `wheresryan22/anatomy-community`. People share plain HTML figures there: a build script that writes standalone pages next to itself, as the skill's examples do. React and Next.js figures can't be submitted. The gallery shows every figure in the light theme, so a published figure needs its light page (`build.mjs --light`); a dark page is optional.
+The community gallery is the repository `wheresryan22/anatomy-community`. People share plain HTML figures there: a build script that writes standalone pages next to itself, as the skill's examples do, in any theme. React and Next.js figures can't be submitted.
 
-Publish only when the user asks to share or publish a figure. Never push, fork or open a pull request yourself: prepare everything locally, show it, and give the user the commands to run.
+Publish only when the user asks to share or publish a figure. Never send anything without their explicit yes.
 
 ## Steps
 
-1. **Check the figure is finished.** Its pages are built and up to date, the line check passes, and `--audit` passes if it has pipes, cables or round parts. A figure that fails these will fail the gallery's checks too.
+1. **Check the figure is finished.** Its pages are built and up to date, the line check passes, `--audit` passes if it has pipes, cables or round parts, and with reduced motion on it holds one still pose. The gallery checks all of this too.
 2. **Ask the user for what only they can give:**
-   - their GitHub username (the author);
-   - a title (at most 80 characters);
+   - their GitHub username (the author); `gh api user --jq .login` shows who the GitHub CLI is signed in as;
+   - a title (at most 80 characters) and a short kebab-case id;
    - the license: MIT (the default) or CC-BY-4.0;
    - confirmation that it is their own work and they are happy to share it.
    The prompt is the request that made the figure; reuse it, trimmed to 600 characters.
-3. **Get a local clone of the gallery.** If the user has none, give them the commands to fork and clone it (`gh repo fork wheresryan22/anatomy-community --clone`), and wait.
-4. **Publish into the clone:**
+3. **Get a local clone of the gallery,** if they have none: `gh repo clone wheresryan22/anatomy-community`. Cloning the main repository is fine: the submit step makes a fork for them if they need one.
+4. **Show the plan,** without doing anything:
    ```sh
    node <skill>/scripts/publish.mjs <figure folder> --into <clone> --id <kebab-id> \
      --title "..." --author <github user> --prompt "..." \
      [--agent "Claude Code"|OpenCode|Codex|Other] [--model "..."] [--license MIT|CC-BY-4.0] \
-     [--tags a,b] [--audit] [--pages dark.html,light.html]
+     [--tags a,b] [--audit] [--pages a.html,b.html] --submit --dry-run
    ```
-   Pass `--agent` for the agent you are running in. It copies only the figure's source into `figures/<author>/<id>/src/`, points its kit imports at the clone's `.skill/` link, records the kit fingerprint, checks the build works and removes what it built: the gallery keeps source only, and its CI builds the pages and the poster.
+   Pass `--agent` for the agent you are running in. Read the plan back to the user: it names the fork (if any), the branch, the folder it adds and where the pull request goes.
+5. **Only after the user says yes,** run the same command with `--yes` instead of `--dry-run`. It copies only the figure's source into `figures/<author>/<id>/src/`, points its kit imports at the clone's `.skill/` link, records the kit fingerprint, checks the build, saves a preview to `shots/<author>-<id>/preview.png`, then commits that folder alone, pushes, and opens the pull request. Give the user the link it prints.
    - If it says a file reaches outside the figure folder and the skill, copy what that file needs into the figure folder, rebuild, and publish again.
    - If it can't tell which pages are the figure, pass `--pages`.
-5. **Validate inside the clone:** `node scripts/validate.mjs figures/<author>/<id>` must end `passed`. Fix what it names. With Docker running (`docker build --platform linux/amd64 -t anatomy-sandbox:local sandbox` once), it runs the build in the same locked, network-less container as the gallery's CI; without Docker it still checks everything except the network isolation.
-6. **Show the user** the poster and screenshots in `shots/<author>-<id>/`, then give them the git and `gh` commands the publish script printed. They run them.
+   - To send an updated version later, run it again with `--force`; it updates the same pull request.
+6. **Without `--submit`** the script stops after preparing the folder and prints the git and `gh` commands instead; use that if the user prefers to send it themselves.
+
+People without a terminal can also submit through the gallery's **Submit a figure** issue form, with a link to a GitHub Gist holding the figure's source.
 
 ## What the gallery rejects
 
@@ -37,4 +40,5 @@ Publish only when the user asks to share or publish a figure. Never push, fork o
 - files other than source text under `src/`, or committed built pages;
 - builds that write anything but their pages, or that differ between two runs;
 - figures that keep moving with reduced motion on.
+
 Write figures that way from the start if the user plans to share them.
