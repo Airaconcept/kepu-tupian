@@ -102,7 +102,7 @@ async function main() {
   }
   const profile = mkdtempSync(join(tmpdir(), "iso-capture-"));
   const chrome = spawn(binary, [
-    "--headless=new", ...(process.platform === "linux" ? ["--no-sandbox"] : []),
+    "--headless=new", ...(process.platform === "linux" ? ["--no-sandbox"] : []), ...(process.platform === "win32" ? ["--do-not-de-elevate"] : []),
     "--remote-debugging-port=0",
     `--user-data-dir=${profile}`,
     "--no-first-run",
@@ -205,6 +205,7 @@ async function main() {
       const [zx, zy, zw, zh] = options.zoom;
       return { clip: { x: box.x + zx, y: box.y + zy, width: zw, height: zh }, scale: options.zoomScale / options.scale };
     };
+    box = await boxOf();
     const first = clipOf();
     await shoot(out, first.clip, first.scale);
     const shotAt = Date.now();
@@ -212,6 +213,7 @@ async function main() {
     const readouts = [];
     for (const delay of [...options.times].sort((a, b) => a - b)) {
       await sleep(Math.max(0, shotAt + delay - Date.now()));
+      box = await boxOf();
       const next = clipOf();
       await shoot(out.replace(/\.png$/, `-${delay}.png`), next.clip, next.scale);
       readouts.push(`+${delay}ms "${await readoutOf()}"`);
