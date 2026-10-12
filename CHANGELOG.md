@@ -38,6 +38,8 @@ All notable changes to Anatomy are recorded here. The format follows [Keep a Cha
 - Native fidelity checks now compare complete filled silhouettes for cut parts and honor open round ends in the kit reference, preserving deliberately unstroked cut edges.
 - Tube fidelity checks path coverage in both directions when vertex counts differ, rejecting empty or truncated live silhouettes while preserving equivalent resampling.
 - Solid clearances check sliding rods whose drawn reach changes, even when their stretching geometry leaves no relative translation to a stationary obstacle.
+- React `Solid` honors the existing `paths.seamless` marker so smooth tone regions receive the same seam treatment as the plain SVG renderer.
+
 - `examples/test-rig/` drew its glass button dark in the light theme. `stretch.css` now has light values for its own colours.
 
 ### Changed
