@@ -6,6 +6,7 @@ All notable changes to Anatomy are recorded here. The format follows [Keep a Cha
 
 ### Fixed
 
+- Capture measures the current figure before every screenshot, including moved, resized and timed zoom crops.
 - `publish.mjs --submit` makes the fork again with gh 2.101 and later, which refuse `--remote` when a repository is named; gh never adds a remote in that case, so the flag is gone (#53).
 
 ## [1.1.0] - 2026-10-12
