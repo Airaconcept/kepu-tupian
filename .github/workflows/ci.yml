@@ -63,6 +63,10 @@ jobs:
         run: |
           npm install --prefix "$RUNNER_TEMP/anatomy-react-tests" --no-package-lock --no-save react@19.3.0 react-dom@19.3.0 typescript@5.9.3
           NODE_PATH="$RUNNER_TEMP/anatomy-react-tests/node_modules" node --test scripts/react-solid-seamless.test.mjs
+      - name: React faded dot regressions
+        run: |
+          npm install --prefix "$RUNNER_TEMP/anatomy-react-tests" --no-package-lock --no-save react@19.3.0 react-dom@19.3.0 typescript@5.9.3
+          NODE_PATH="$RUNNER_TEMP/anatomy-react-tests/node_modules" node --test scripts/react-dots-opacity.test.mjs
 
       - name: Committed pages are unchanged
         run: |
