@@ -82,6 +82,8 @@ function chromePath() {
       }
     }
   }
+  const linux = join(homedir(), ".cache/ms-playwright");
+  if (existsSync(linux)) for (const dir of readdirSync(linux).sort().reverse()) for (const sub of ["chrome-linux64/chrome", "chrome-linux/chrome"]) candidates.push(join(linux, dir, sub));
   return candidates.find((path) => existsSync(path));
 }
 
@@ -100,7 +102,7 @@ async function main() {
   }
   const profile = mkdtempSync(join(tmpdir(), "iso-capture-"));
   const chrome = spawn(binary, [
-    "--headless=new",
+    "--headless=new", ...(process.platform === "linux" ? ["--no-sandbox"] : []),
     "--remote-debugging-port=0",
     `--user-data-dir=${profile}`,
     "--no-first-run",

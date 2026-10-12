@@ -14,6 +14,8 @@ All notable changes to Anatomy are recorded here. The format follows [Keep a Cha
 
 ### Fixed
 
+- Start headless Chrome on Linux: `capture.mjs`, `drive.mjs` and `turn-check.mjs` pass `--no-sandbox` there and find Playwright's Linux Chromium under `~/.cache/ms-playwright`, so the browser checks and the gallery's validator run on Linux hosts.
+- `publish.mjs --submit` no longer stops with "already exists" when an earlier run without `--submit` left the figure's folder in the clone; it only asks for `--force` when the folder is already on the gallery's main.
 - Preserve configured pipe clearances in broad-phase solid and pipe sampling.
 - Observe replacement and late-mounted DOM targets through useInView.
 - Check texture line attachments against rounded rectangle corners, including separate radii, SVG clamping and transformed outlines.
