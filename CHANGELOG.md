@@ -13,6 +13,8 @@ All notable changes to Anatomy are recorded here. The format follows [Keep a Cha
 
 ### Fixed
 
+- Reject drive `turn` and `orbit` actions when the page has no callable 3D turn controller, instead of reporting an unchanged figure as a successful turn.
+
 - Preserve configured pipe clearances in broad-phase solid and pipe sampling.
 - Observe replacement and late-mounted DOM targets through useInView.
 - Check texture line attachments against rounded rectangle corners, including separate radii, SVG clamping and transformed outlines.

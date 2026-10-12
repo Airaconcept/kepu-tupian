@@ -261,14 +261,14 @@ async function main() {
       } else if (kind === "turn") {
         const [value, group] = args;
         const call = group ? `window.__isoTurn.set(${JSON.stringify({ [group]: value })})` : `window.__isoTurn.set(${typeof value === "object" ? JSON.stringify(value) : Number(value)})`;
-        await evaluate(`(()=>{if(!window.__isoTurn)return false;${call};return new Promise((done)=>requestAnimationFrame(()=>requestAnimationFrame(()=>done(true))))})()`);
+        await evaluate(`(()=>{if(typeof window.__isoTurn?.set!=="function")throw new Error("${kind} action requires window.__isoTurn.set");${call};return new Promise((done)=>requestAnimationFrame(()=>requestAnimationFrame(()=>done(true))))})()`);
       } else if (kind === "orbit") {
         const [out, from, to, step, selector, scale, region, columns] = args;
         const frames = [];
         const labels = [];
         for (let at = from; step > 0 ? at <= to + 1e-9 : at >= to - 1e-9; at += step) {
           const angle = Math.round(at * 1000) / 1000;
-          await evaluate(`(()=>{if(!window.__isoTurn)return false;window.__isoTurn.set(${angle});return new Promise((done)=>requestAnimationFrame(()=>requestAnimationFrame(()=>done(true))))})()`);
+          await evaluate(`(()=>{if(typeof window.__isoTurn?.set!=="function")throw new Error("${kind} action requires window.__isoTurn.set");window.__isoTurn.set(${angle});return new Promise((done)=>requestAnimationFrame(()=>requestAnimationFrame(()=>done(true))))})()`);
           frames.push(await capture(selector, scale ?? 0.5, region));
           labels.push(`${angle}°`);
         }
