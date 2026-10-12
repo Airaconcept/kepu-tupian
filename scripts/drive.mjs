@@ -172,8 +172,9 @@ async function main() {
     if (navigation.error) throw new Error(`Navigation failed: ${navigation.error.message}`);
     if (navigation.result?.errorText) throw new Error(`Navigation failed: ${navigation.result.errorText}`);
     await sleep(1200);
-    const boxOf = (selector) => evaluate(`(()=>{const el=document.querySelector(${JSON.stringify(selector ?? ".iso-plate")})||document.body;const r=el.getBoundingClientRect();return {x:r.left,y:r.top,w:r.width,h:r.height,sx:scrollX,sy:scrollY}})()`);
-    const readout = () => evaluate(`(document.querySelector("[data-readout]")||{}).textContent||""`);
+    const targetOf = (selector, fallback = ".iso-plate") => `(()=>{const select=${JSON.stringify(selector ?? null)};const el=document.querySelector(select??${JSON.stringify(fallback)});if(select!==null&&!el)throw new Error("Drive target not found: "+select);return el})()`;
+    const boxOf = (selector) => evaluate(`(()=>{const el=${targetOf(selector)}||document.body;const r=el.getBoundingClientRect();return {x:r.left,y:r.top,w:r.width,h:r.height,sx:scrollX,sy:scrollY}})()`);
+    const readout = (selector) => evaluate(selector == null ? `(document.querySelector("[data-readout]")||{}).textContent||""` : `(()=>{const el=${targetOf(selector)};return(el.matches('[data-readout]')?el:el.querySelector('[data-readout]')||el.closest('.iso-plate')?.querySelector('[data-readout]')||{}).textContent||""})()`);
     const capture = async (selector, scale = 1, region) => {
       const box = await boxOf(selector);
       const x = box.x + box.sx;
@@ -191,7 +192,7 @@ async function main() {
     for (const action of actions) {
       const [kind, ...args] = action;
       if (kind === "wait") await sleep(args[0]);
-      else if (kind === "scroll") await evaluate(`(()=>{const el=document.querySelector(${JSON.stringify(args[0] ?? ".iso-plate")});if(el)el.scrollIntoView({block:"center"})})()`);
+      else if (kind === "scroll") await evaluate(`(()=>{const el=${targetOf(args[0])};if(el)el.scrollIntoView({block:"center"})})()`);
       else if (kind === "move") {
         const box = await boxOf(args[0]);
         const to = [box.x + box.w * args[1], box.y + box.h * args[2]];
@@ -221,7 +222,7 @@ async function main() {
         await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: to[0], y: to[1], button: "left", buttons: 0, clickCount: 1 });
         mouse = to;
       } else if (kind === "key") {
-        await evaluate(`(()=>{const el=document.querySelector(${JSON.stringify(args[1] ?? '[tabindex="0"]')});if(el)el.focus()})()`);
+        await evaluate(`(()=>{const el=${targetOf(args[1], '[tabindex="0"]')};if(el)el.focus()})()`);
         const key = args[0];
         const named = { " ": "Space", "-": "Minus", "=": "Equal", ",": "Comma", ".": "Period", "/": "Slash", ";": "Semicolon", "'": "Quote", "[": "BracketLeft", "]": "BracketRight", "\\": "Backslash", "`": "Backquote" };
         const code = args[2] ?? (named[key] ?? (/^[0-9]$/.test(key) ? `Digit${key}` : key.length === 1 ? `Key${key.toUpperCase()}` : key));
@@ -244,7 +245,7 @@ async function main() {
       else if (kind === "shot") {
         const [out, selector, scale, region] = args;
         save(out, await capture(selector, scale ?? 1, region));
-        console.log(`shot ${out} · readout "${await readout()}"`);
+        console.log(`shot ${out} · readout "${await readout(selector)}"`);
       } else if (kind === "sheet") {
         const [out, every, count, selector, scale, region, columns] = args;
         const frames = [];
@@ -252,7 +253,7 @@ async function main() {
         for (let index = 0; index < count; index++) {
           if (index) await sleep(every);
           frames.push(await capture(selector, scale ?? 0.5, region));
-          texts.push(await readout());
+          texts.push(await readout(selector));
         }
         const tiled = await evaluate(`(async()=>{const frames=${JSON.stringify(frames)};const cols=${columns ?? Math.min(count, 6)};const images=await Promise.all(frames.map(src=>new Promise(done=>{const image=new Image();image.onload=()=>done(image);image.src="data:image/png;base64,"+src})));const w=images[0].width,h=images[0].height,rows=Math.ceil(images.length/cols);const canvas=document.createElement("canvas");canvas.width=w*cols;canvas.height=h*rows;const ctx=canvas.getContext("2d");ctx.fillStyle="#808080";ctx.fillRect(0,0,canvas.width,canvas.height);images.forEach((image,index)=>{ctx.drawImage(image,(index%cols)*w,Math.floor(index/cols)*h);ctx.fillStyle="#ff00aa";ctx.font="bold 12px monospace";ctx.fillText(String(index),(index%cols)*w+6,Math.floor(index/cols)*h+16)});return canvas.toDataURL("image/png").split(",")[1]})()`);
         save(out, tiled);

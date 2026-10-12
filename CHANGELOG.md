@@ -16,6 +16,7 @@ All notable changes to Anatomy are recorded here. The format follows [Keep a Cha
 - Preserve configured pipe clearances in broad-phase solid and pipe sampling.
 - Observe replacement and late-mounted DOM targets through useInView.
 - Check texture line attachments against rounded rectangle corners, including separate radii, SVG clamping and transformed outlines.
+- Honor explicit capture, drive and line-check selectors, and scope reported readouts to the requested figure.
 
 - `scripts/drive.mjs` now fails when a browser evaluation throws or rejects, rather than reporting a clean successful session.
 - The arcade cabinet now accepts coins with reduced motion enabled, preserving the meter, credit and power-on events when the coin animation is skipped.

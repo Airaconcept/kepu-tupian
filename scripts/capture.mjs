@@ -160,8 +160,11 @@ async function main() {
     await evaluate(`(async()=>{const h=document.documentElement.scrollHeight;for(let y=0;y<h;y+=400){scrollTo(0,y);await new Promise(r=>setTimeout(r,60))}scrollTo(0,0)})()`);
     await sleep(Math.max(0, options.wait - 1500));
     const select = options.select ?? ".iso-plate";
-    const boxOf = async () =>
-      evaluate(`(()=>{const el=document.querySelector(${JSON.stringify(select)})||document.querySelector("svg")||document.body;el.scrollIntoView({block:"center"});const r=el.getBoundingClientRect();return {x:r.left+scrollX,y:r.top+scrollY,w:r.width,h:r.height,vx:r.left,vy:r.top}})()`);
+    const boxOf = async () => {
+      const box = await evaluate(`(()=>{let el;try{el=document.querySelector(${JSON.stringify(select)})}catch{};if(!el&&${options.select === undefined})el=document.querySelector("svg")||document.body;if(!el)return null;el.scrollIntoView({block:"center"});const r=el.getBoundingClientRect();return {x:r.left+scrollX,y:r.top+scrollY,w:r.width,h:r.height,vx:r.left,vy:r.top}})()`);
+      if (!box) throw new Error(`Capture target not found: ${select}`);
+      return box;
+    };
     let box = await boxOf();
     if (options.hover) {
       await sleep(300);
@@ -177,7 +180,8 @@ async function main() {
       await sleep(1200);
     }
     if (options.keys) {
-      await evaluate(`(()=>{const f=document.querySelector('[tabindex="0"]');if(f)f.focus()})()`);
+      const focus = options.select === undefined ? `document.querySelector('[tabindex="0"]')` : `(()=>{const el=document.querySelector(${JSON.stringify(select)});return el.matches('[tabindex="0"]')?el:el.querySelector('[tabindex="0"]')||el.closest('[tabindex="0"]')||el})()`;
+      await evaluate(`(()=>{const f=${focus};if(f)f.focus()})()`);
       const named = { " ": "Space", "-": "Minus", "=": "Equal", ",": "Comma", ".": "Period", "/": "Slash", ";": "Semicolon", "'": "Quote", "[": "BracketLeft", "]": "BracketRight", "\\": "Backslash", "`": "Backquote" };
       for (const entry of options.keys) {
         if (entry === "Tab") continue;
@@ -202,15 +206,16 @@ async function main() {
     const first = clipOf();
     await shoot(out, first.clip, first.scale);
     const shotAt = Date.now();
+    const readoutOf = () => evaluate(options.select === undefined ? `(document.querySelector("[data-readout]")||{}).textContent||""` : `(()=>{const el=document.querySelector(${JSON.stringify(select)});const plate=el.closest(".iso-plate")||el.querySelector(".iso-plate")||el;return(plate.querySelector("[data-readout]")||{}).textContent||""})()`);
     const readouts = [];
     for (const delay of [...options.times].sort((a, b) => a - b)) {
       await sleep(Math.max(0, shotAt + delay - Date.now()));
       const next = clipOf();
       await shoot(out.replace(/\.png$/, `-${delay}.png`), next.clip, next.scale);
-      readouts.push(`+${delay}ms "${await evaluate(`(document.querySelector("[data-readout]")||{}).textContent||""`)}"`);
+      readouts.push(`+${delay}ms "${await readoutOf()}"`);
     }
     const sideways = await evaluate(`document.documentElement.scrollWidth > innerWidth + 1`);
-    const readout = await evaluate(`(document.querySelector("[data-readout]")||{}).textContent||""`);
+    const readout = await readoutOf();
     console.log(`saved ${out}`);
     console.log(`clip ${Math.round(box.x)},${Math.round(box.y)} ${Math.round(box.w)}x${Math.round(box.h)} · readout "${readout}" · scrolls sideways: ${sideways ? "YES" : "no"}`);
     if (readouts.length) console.log(`readout over time: ${readouts.join(" · ")}`);
