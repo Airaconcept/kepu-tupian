@@ -13,6 +13,8 @@ All notable changes to Anatomy are recorded here. The format follows [Keep a Cha
 
 ### Fixed
 
+- Resolve the current React readout target on every write so replaced readouts and anchors do not leave updates on detached elements.
+
 - Preserve configured pipe clearances in broad-phase solid and pipe sampling.
 - Observe replacement and late-mounted DOM targets through useInView.
 - Check texture line attachments against rounded rectangle corners, including separate radii, SVG clamping and transformed outlines.
