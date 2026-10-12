@@ -236,15 +236,7 @@ async function main() {
         const limit = Date.now() + (args[1] ?? 10000);
         let ok = false;
         while (Date.now() < limit) {
-          let timer;
-          try {
-            ok = await Promise.race([
-              evaluate(`Promise.resolve(${args[0]}).then(Boolean)`),
-              new Promise((done) => { timer = setTimeout(() => done(false), Math.max(0, limit - Date.now())); }),
-            ]);
-          } finally {
-            clearTimeout(timer);
-          }
+          ok = await evaluate(`Promise.race([Promise.resolve(${args[0]}).then(Boolean), new Promise((done) => setTimeout(() => done(false), ${Math.max(0, limit - Date.now())}))])`);
           if (ok) break;
           await sleep(25);
         }
