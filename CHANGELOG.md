@@ -1,8 +1,10 @@
 # Changelog
 
-All notable changes to Anatomy are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The skill has no version numbers yet, so entries are dated.
+All notable changes to Anatomy are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); entries from before the first release are dated.
 
 ## [Unreleased]
+
+## [1.1.0] - 2026-10-12
 
 ### Added
 
@@ -10,9 +12,6 @@ All notable changes to Anatomy are recorded here. The format follows [Keep a Cha
 - `publish.mjs` records how long the figure took to make and how many tokens it used. In Claude Code it reads them from the session's own log (`scripts/session.mjs`, through `CLAUDE_CODE_SESSION_ID`, subagents included): from the request that made the figure to the request to publish it, idle gaps over 10 minutes left out and cache reads not counted. The plan shows both before anything is sent. `--minutes` and `--tokens` set them by hand, `--no-session` leaves them out.
 - `publish.mjs` accepts `--agent Antigravity`, alongside Claude Code, OpenCode, Codex and Other.
 - OpenCode and Codex support, alongside Claude Code. `SKILL.md` exposes `/anatomy` to OpenCode through `metadata`, `agents/openai.yaml` gives Codex its display name, and the README, CONTRIBUTING and the bug report form cover all three agents.
-- `examples/arcade-cabinet/`, an upright arcade cabinet with its side panel off. A quarter rolls down the coin chute past the coin-switch wire into the cash box, the switch's pulse runs along its cable to the board, and the CRT warms up, self-tests and runs an attract mode drawn in the plane of the tilted monitor; the stick closes a microswitch under the panel. It draws in the light and dark themes and passes `--audit`.
-- `examples/spot-plate/`, a second React figure from the same site as `test-rig`: six pairs of glass drops that run together into one piece of glass as a fan of feeler blades sets `merge`. It draws in the light and dark themes.
-- A first workflow step, **Size it before you start**: every request is sized as a Figure (about 30–90 minutes), a Hero (2–4 hours) or an Epic (6 hours or more), and the estimate is told to the user first. An Epic is not started until the user chooses it over a proposed Hero version. Every size has a working page within the first hour, and Claude reports when a step runs past twice its share of the estimate.
 
 ### Fixed
 
@@ -54,13 +53,23 @@ All notable changes to Anatomy are recorded here. The format follows [Keep a Cha
 - React `Dots` retains the kit's optional per-point opacity, including fading bolt circles and pulsing dots, while ordinary points remain opaque.
 - Write the first readout value even when empty or issued before passive binding.
 - Measure transformed rectangular and round SVG primitives through their true affine bounds.
+
+## [1.0.0] - 2026-10-10
+
+### Added
+
+- `examples/arcade-cabinet/`, an upright arcade cabinet with its side panel off. A quarter rolls down the coin chute past the coin-switch wire into the cash box, the switch's pulse runs along its cable to the board, and the CRT warms up, self-tests and runs an attract mode drawn in the plane of the tilted monitor; the stick closes a microswitch under the panel. It draws in the light and dark themes and passes `--audit`.
+- `examples/spot-plate/`, a second React figure from the same site as `test-rig`: six pairs of glass drops that run together into one piece of glass as a fan of feeler blades sets `merge`. It draws in the light and dark themes.
+- A first workflow step, **Size it before you start**: every request is sized as a Figure (about 30–90 minutes), a Hero (2–4 hours) or an Epic (6 hours or more), and the estimate is told to the user first. An Epic is not started until the user chooses it over a proposed Hero version. Every size has a working page within the first hour, and Claude reports when a step runs past twice its share of the estimate.
+
+### Fixed
+
 - `examples/test-rig/` drew its glass button dark in the light theme. `stretch.css` now has light values for its own colours.
 
 ### Changed
 
 - The workflow steps are renumbered 1–10.
 - The 4× detail sweep scales with the size: the subject and mechanism for a Figure, the whole drawing for a Hero or an Epic. The density rule itself still holds for every figure.
-
 ## 2026-10-08
 
 ### Changed
