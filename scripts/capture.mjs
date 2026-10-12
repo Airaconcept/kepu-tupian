@@ -102,7 +102,7 @@ async function main() {
   }
   const profile = mkdtempSync(join(tmpdir(), "iso-capture-"));
   const chrome = spawn(binary, [
-    "--headless=new", ...(process.platform === "linux" ? ["--no-sandbox"] : []),
+    "--headless=new", ...(process.platform === "linux" ? ["--no-sandbox"] : []), ...(process.platform === "win32" ? ["--do-not-de-elevate"] : []),
     "--remote-debugging-port=0",
     `--user-data-dir=${profile}`,
     "--no-first-run",
