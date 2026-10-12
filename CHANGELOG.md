@@ -13,6 +13,7 @@ All notable changes to Anatomy are recorded here. The format follows [Keep a Cha
 
 ### Fixed
 
+- A Figure no longer quotes a time to the user. The 30–90 minute estimate was often far longer than the build itself ([#41](https://github.com/wheresryan22/anatomy/issues/41)).
 - Preserve configured pipe clearances in broad-phase solid and pipe sampling.
 - Observe replacement and late-mounted DOM targets through useInView.
 - Check texture line attachments against rounded rectangle corners, including separate radii, SVG clamping and transformed outlines.
