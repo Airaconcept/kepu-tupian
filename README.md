@@ -303,7 +303,7 @@ anatomy/
 
 ## Share a figure
 
-Made something good? Ask your agent to publish it to the community gallery, [anatomy-figures](https://github.com/wheresryan22/anatomy-figures), or run `scripts/publish.mjs` yourself. It prepares the figure in your clone of the gallery and prints the commands to open a pull request; it never pushes for you. The gallery's own [CONTRIBUTING.md](https://github.com/wheresryan22/anatomy-figures/blob/main/CONTRIBUTING.md) has the steps.
+Made something good? Ask your agent to publish it to the community gallery, [anatomy-community](https://github.com/wheresryan22/anatomy-community), or run `scripts/publish.mjs` yourself. It prepares the figure in your clone of the gallery and prints the commands to open a pull request; it never pushes for you. The gallery's own [CONTRIBUTING.md](https://github.com/wheresryan22/anatomy-community/blob/main/CONTRIBUTING.md) has the steps.
 
 ## Contributing
 

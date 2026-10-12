@@ -1,6 +1,6 @@
 # Publishing a figure to the community gallery
 
-The community gallery is the repository `wheresryan22/anatomy-figures`. People share framework-free figures there: a build script that writes standalone pages next to itself, as the skill's examples do. React and Next.js figures can't be published yet.
+The community gallery is the repository `wheresryan22/anatomy-community`. People share plain HTML figures there: a build script that writes standalone pages next to itself, as the skill's examples do. React and Next.js figures can't be submitted. The gallery shows every figure in the light theme, so a published figure needs its light page (`build.mjs --light`); a dark page is optional.
 
 Publish only when the user asks to share or publish a figure. Never push, fork or open a pull request yourself: prepare everything locally, show it, and give the user the commands to run.
 
@@ -13,7 +13,7 @@ Publish only when the user asks to share or publish a figure. Never push, fork o
    - the license: MIT (the default) or CC-BY-4.0;
    - confirmation that it is their own work and they are happy to share it.
    The prompt is the request that made the figure; reuse it, trimmed to 600 characters.
-3. **Get a local clone of the gallery.** If the user has none, give them the commands to fork and clone it (`gh repo fork wheresryan22/anatomy-figures --clone`), and wait.
+3. **Get a local clone of the gallery.** If the user has none, give them the commands to fork and clone it (`gh repo fork wheresryan22/anatomy-community --clone`), and wait.
 4. **Publish into the clone:**
    ```sh
    node <skill>/scripts/publish.mjs <figure folder> --into <clone> --id <kebab-id> \

@@ -18,7 +18,7 @@ function usage(message) {
   if (message) console.error(`publish: ${message}\n`);
   console.log(`Copy a figure into a local clone of the community gallery, ready for a pull request.
 
-  node scripts/publish.mjs <figure folder> --into <anatomy-figures clone> --id <kebab-id> --title "..." --prompt "..." --author <github user>
+  node scripts/publish.mjs <figure folder> --into <anatomy-community clone> --id <kebab-id> --title "..." --prompt "..." --author <github user>
       [--agent "Claude Code"|OpenCode|Codex|Other] [--model "..."] [--license MIT|CC-BY-4.0] [--tags a,b]
       [--build build.mjs] [--pages dark.html,light.html] [--kind "SVG + WebGL"] [--audit] [--no-poster] [--force]
 
@@ -112,7 +112,7 @@ export function publish(options) {
   const source = resolve(options.source);
   const repo = resolve(options.into);
   if (!existsSync(join(source, options.build))) throw new Error(`no ${options.build} in ${source}`);
-  if (!existsSync(join(repo, "figures")) || !existsSync(join(repo, "scripts", "validate.mjs"))) throw new Error(`${repo} doesn't look like a clone of anatomy-figures (no figures/ or scripts/validate.mjs)`);
+  if (!existsSync(join(repo, "figures")) || !existsSync(join(repo, "scripts", "validate.mjs"))) throw new Error(`${repo} doesn't look like a clone of anatomy-community (no figures/ or scripts/validate.mjs)`);
   if (inside(SKILL, source) && !inside(join(SKILL, "examples"), source)) throw new Error("the figure folder is inside the skill itself; publish the folder where the figure was built");
   const dest = join(repo, "figures", options.id);
   if (existsSync(dest)) {
@@ -125,6 +125,10 @@ export function publish(options) {
   const skipped = all.filter((file) => !files.includes(file));
   const pages = detectPages(source, files, options.pages);
   for (const page of Object.values(pages)) if (page && !files.includes(page)) throw new Error(`page ${page} not found in ${source}; build the figure first`);
+  const themeOf = (page) => (readFileSync(join(source, page), "utf8").match(/<body[^>]*\bdata-theme="(light|dark)"/) ?? [])[1] ?? "dark";
+  if (pages.dark && !pages.light && themeOf(pages.dark) === "light") [pages.light, pages.dark] = [pages.dark, undefined];
+  if (!pages.light) throw new Error("the gallery shows figures in the light theme: build the light page too (node build.mjs --light), then publish again");
+  for (const [key, page] of Object.entries(pages)) if (page && themeOf(page) !== key) throw new Error(`${page} is a ${themeOf(page)} page, not ${key}; pass --pages dark.html,light.html in that order`);
 
   const skillLink = join(repo, ".skill");
   const kit = fingerprintOfSkill(SKILL);
@@ -153,9 +157,8 @@ export function publish(options) {
     throw new Error(`${repo}/.skill (${where}) is a different kit version than this skill; remove it and run again`);
   }
 
-  const build = [[`src/${options.build}`]];
-  if (pages.light) build.push([`src/${options.build}`, "--light"]);
-  if (!pages.dark) build.shift();
+  const build = [[`src/${options.build}`, "--light"]];
+  if (pages.dark) build.push([`src/${options.build}`]);
   for (const command of build) run(command, dest);
 
   const pageText = Object.values(pages).filter(Boolean).map((page) => readFileSync(join(dest, "src", page), "utf8")).join("\n");
@@ -178,7 +181,7 @@ export function publish(options) {
   writeFileSync(join(dest, "figure.json"), JSON.stringify(figure, null, 2) + "\n");
 
   if (!options.noPoster) {
-    const page = join(dest, "src", pages.light ?? pages.dark);
+    const page = join(dest, "src", pages.light);
     run([join(SKILL, "scripts", "capture.mjs"), page, "--width", "1200", "--out", join(dest, "poster.png")], dest);
     const size = statSync(join(dest, "poster.png")).size;
     if (size > 600 << 10) throw new Error(`poster.png is ${(size / 1024).toFixed(0)} KB, over 600 KB; retake it smaller with scripts/capture.mjs --width 900`);
@@ -195,7 +198,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     if (skipped.length) console.log(`  left out (not a source type): ${skipped.join(", ")}`);
     console.log(`  .skill link: ${linked}`);
     console.log(`\nCheck it:\n  cd ${repo}\n  node scripts/validate.mjs figures/${figure.id}`);
-    console.log(`\nWhen you are happy with it, from your fork of anatomy-figures:\n  git switch -c figure/${figure.id}\n  git add figures/${figure.id}\n  git commit -m "Add ${figure.title.replace(/"/g, "'")}"\n  git push -u origin figure/${figure.id}\n  gh pr create --repo wheresryan22/anatomy-figures --fill`);
+    console.log(`\nWhen you are happy with it, from your fork of anatomy-community:\n  git switch -c figure/${figure.id}\n  git add figures/${figure.id}\n  git commit -m "Add ${figure.title.replace(/"/g, "'")}"\n  git push -u origin figure/${figure.id}\n  gh pr create --repo wheresryan22/anatomy-community --fill`);
   } catch (error) {
     console.error(`publish: ${error.message}`);
     process.exit(1);

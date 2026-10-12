@@ -41,7 +41,7 @@ test("publishing an example rebuilds it byte for byte in the gallery", () => {
     const { dest, figure } = publish({ source: join(SKILL, "examples", "dial-indicator"), into: repo, id: "dial-indicator", title: "Dial indicator", prompt: "/anatomy a dial indicator", author: "octo-cat", agent: "Codex", license: "MIT", build: "build.mjs", tags: [], noPoster: true, date: "2026-10-12" });
     assert.equal(figure.kind, "SVG");
     assert.equal(figure.skill.kit, fingerprintOfSkill(SKILL));
-    assert.deepEqual(figure.build, [["src/build.mjs"], ["src/build.mjs", "--light"]]);
+    assert.deepEqual(figure.build, [["src/build.mjs", "--light"], ["src/build.mjs"]]);
     assert.deepEqual(figure.pages, { dark: "src/dial-indicator.html", light: "src/dial-indicator-light.html" });
     for (const page of ["dial-indicator.html", "dial-indicator-light.html"]) assert.ok(readFileSync(join(dest, "src", page)).equals(readFileSync(join(SKILL, "examples", "dial-indicator", page))), page);
     assert.ok(existsSync(join(repo, ".skill", "kit", "iso-kit.mjs")));
@@ -54,7 +54,7 @@ test("publishing an example rebuilds it byte for byte in the gallery", () => {
 test("publishing refuses a folder that is not a gallery clone", () => {
   const empty = mkdtempSync(join(tmpdir(), "not-gallery-"));
   try {
-    assert.throws(() => publish({ source: join(SKILL, "examples", "dial-indicator"), into: empty, id: "x", title: "x", prompt: "x", author: "x", agent: "Codex", license: "MIT", build: "build.mjs", tags: [], noPoster: true }), /doesn't look like a clone of anatomy-figures/);
+    assert.throws(() => publish({ source: join(SKILL, "examples", "dial-indicator"), into: empty, id: "x", title: "x", prompt: "x", author: "x", agent: "Codex", license: "MIT", build: "build.mjs", tags: [], noPoster: true }), /doesn't look like a clone of anatomy-community/);
   } finally {
     rmSync(empty, { recursive: true, force: true });
   }
