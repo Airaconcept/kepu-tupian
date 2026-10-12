@@ -20,7 +20,7 @@ function usage(message) {
 
   node scripts/publish.mjs <figure folder> --into <anatomy-community clone> --id <kebab-id> --title "..." --prompt "..." --author <github user>
       [--agent "Claude Code"|OpenCode|Codex|Other] [--model "..."] [--license MIT|CC-BY-4.0] [--tags a,b]
-      [--build build.mjs] [--pages dark.html,light.html] [--kind "SVG + WebGL"] [--audit] [--force]
+      [--build build.mjs] [--pages dark.html,light.html] [--kind "SVG + WebGL"] [--audit] [--no-preview] [--force]
 
 The figure must be plain HTML: a build script that writes standalone pages next to itself, with a light page.
 Only the source is copied, to figures/<author>/<id>/: the gallery's CI builds the pages and the poster.
@@ -43,6 +43,7 @@ function parse(argv) {
     else if (arg === "--pages") options.pages = take(index++).split(",").map((page) => page.trim());
     else if (arg === "--audit") options.audit = true;
     else if (arg === "--force") options.force = true;
+    else if (arg === "--no-preview") options.noPreview = true;
     else if (arg.startsWith("--")) usage(`unknown option ${arg}`);
     else if (!options.source) options.source = arg;
     else usage(`unexpected argument ${arg}`);
@@ -109,6 +110,7 @@ function run(args, cwd) {
 }
 
 export function publish(options) {
+  const log = options.log ?? (() => {});
   const source = resolve(options.source);
   const repo = resolve(options.into);
   if (!existsSync(join(source, options.build))) throw new Error(`no ${options.build} in ${source}`);
@@ -163,7 +165,18 @@ export function publish(options) {
 
   const build = [[`src/${options.build}`, "--light"]];
   if (pages.dark) build.push([`src/${options.build}`]);
-  for (const command of build) run(command, dest);
+  for (const command of build) {
+    log(`building the ${command.includes("--light") ? "light" : "dark"} page (heavy figures take a minute or two)…`);
+    run(command, dest);
+  }
+  let preview = null;
+  if (!options.noPreview) {
+    log("taking a preview of the light page…");
+    const shots = join(repo, "shots", `${author.toLowerCase()}-${options.id}`);
+    mkdirSync(shots, { recursive: true });
+    preview = join(shots, "preview.png");
+    run([join(SKILL, "scripts", "capture.mjs"), join(dest, "src", pages.light), "--reduced", "--width", "1200", "--out", preview], dest);
+  }
   const pageText = Object.values(pages).filter(Boolean).map((page) => readFileSync(join(dest, "src", page), "utf8")).join("\n");
   for (const page of outputs) rmSync(join(dest, "src", page), { force: true });
   const figure = {
@@ -184,17 +197,19 @@ export function publish(options) {
   };
   writeFileSync(join(dest, "figure.json"), JSON.stringify(figure, null, 2) + "\n");
 
-  return { dest, figure, skipped, linked };
+  return { dest, figure, skipped, linked, preview };
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const options = parse(process.argv.slice(2));
   try {
-    const { dest, figure, skipped, linked } = publish(options);
+    console.log(`publishing ${options.id}…`);
+    const { dest, figure, skipped, linked, preview } = publish({ ...options, log: (line) => console.log(`  ${line}`) });
     const repo = resolve(options.into);
     console.log(`published figures/${figure.author.toLowerCase()}/${figure.id} (${figure.kind}, kit ${figure.skill.kit.slice(7, 19)}): source only, the gallery builds the pages`);
     if (skipped.length) console.log(`  left out (not a source type): ${skipped.join(", ")}`);
     console.log(`  .skill link: ${linked}`);
+    if (preview) console.log(`  preview: ${preview} (not committed; CI makes the real one)`);
     const where = `figures/${figure.author.toLowerCase()}/${figure.id}`;
     console.log(`\nCheck it:\n  cd ${repo}\n  node scripts/validate.mjs ${where}`);
     console.log(`\nWhen you are happy with it, from your fork of anatomy-community:\n  git switch -c figure/${figure.id}\n  git add ${where}\n  git commit -m "Add ${figure.title.replace(/"/g, "'")}"\n  git push -u origin figure/${figure.id}\n  gh pr create --repo wheresryan22/anatomy-community --fill`);

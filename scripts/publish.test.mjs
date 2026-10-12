@@ -39,7 +39,7 @@ test("skill paths are rewritten to the gallery's .skill link, and nothing else",
 test("publishing copies only the source, under the author, and it rebuilds byte for byte", () => {
   const repo = gallery();
   try {
-    const { dest, figure } = publish({ source: join(SKILL, "examples", "dial-indicator"), into: repo, id: "dial-indicator", title: "Dial indicator", prompt: "/anatomy a dial indicator", author: "Octo-Cat", agent: "Codex", license: "MIT", build: "build.mjs", tags: [], date: "2026-10-12" });
+    const { dest, figure } = publish({ source: join(SKILL, "examples", "dial-indicator"), into: repo, id: "dial-indicator", title: "Dial indicator", prompt: "/anatomy a dial indicator", author: "Octo-Cat", agent: "Codex", license: "MIT", build: "build.mjs", tags: [], date: "2026-10-12", noPreview: true });
     assert.equal(dest, join(repo, "figures", "octo-cat", "dial-indicator"));
     assert.equal(figure.author, "Octo-Cat");
     assert.ok(!existsSync(join(dest, "src", "dial-indicator.html")) && !existsSync(join(dest, "src", "dial-indicator-light.html")) && !existsSync(join(dest, "poster.png")), "no built pages or poster are left");
@@ -50,7 +50,7 @@ test("publishing copies only the source, under the author, and it rebuilds byte 
     for (const command of figure.build) assert.equal(spawnSync(process.execPath, command, { cwd: dest }).status, 0);
     for (const page of ["dial-indicator.html", "dial-indicator-light.html"]) assert.ok(readFileSync(join(dest, "src", page)).equals(readFileSync(join(SKILL, "examples", "dial-indicator", page))), page);
     assert.ok(existsSync(join(repo, ".skill", "kit", "iso-kit.mjs")));
-    assert.throws(() => publish({ source: join(SKILL, "examples", "dial-indicator"), into: repo, id: "dial-indicator", title: "x", prompt: "x", author: "octo-cat", agent: "Codex", license: "MIT", build: "build.mjs", tags: [] }), /already exists/);
+    assert.throws(() => publish({ source: join(SKILL, "examples", "dial-indicator"), into: repo, id: "dial-indicator", title: "x", prompt: "x", author: "octo-cat", agent: "Codex", license: "MIT", build: "build.mjs", tags: [], noPreview: true }), /already exists/);
   } finally {
     rmSync(repo, { recursive: true, force: true });
   }
@@ -59,7 +59,7 @@ test("publishing copies only the source, under the author, and it rebuilds byte 
 test("publishing refuses a folder that is not a gallery clone", () => {
   const empty = mkdtempSync(join(tmpdir(), "not-gallery-"));
   try {
-    assert.throws(() => publish({ source: join(SKILL, "examples", "dial-indicator"), into: empty, id: "x", title: "x", prompt: "x", author: "x", agent: "Codex", license: "MIT", build: "build.mjs", tags: [] }), /doesn't look like a clone of anatomy-community/);
+    assert.throws(() => publish({ source: join(SKILL, "examples", "dial-indicator"), into: empty, id: "x", title: "x", prompt: "x", author: "x", agent: "Codex", license: "MIT", build: "build.mjs", tags: [], noPreview: true }), /doesn't look like a clone of anatomy-community/);
   } finally {
     rmSync(empty, { recursive: true, force: true });
   }
