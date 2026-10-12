@@ -301,6 +301,10 @@ anatomy/
 > [!NOTE]
 > **The 3D mode is beta.** It is proved on its example and one test figure, not yet on a production figure. A small 3D figure runs at 60 fps; the 380-part stress hand measured about 20 fps at 1440 px wide and 13 to 15 fps on a throttled phone profile, on a heavily loaded machine.
 
+## Share a figure
+
+Made something good? Ask your agent to publish it to the community gallery, [anatomy-figures](https://github.com/wheresryan22/anatomy-figures), or run `scripts/publish.mjs` yourself. It prepares the figure in your clone of the gallery and prints the commands to open a pull request; it never pushes for you. The gallery's own [CONTRIBUTING.md](https://github.com/wheresryan22/anatomy-figures/blob/main/CONTRIBUTING.md) has the steps.
+
 ## Contributing
 
 Issues and pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) first: it covers building the examples, the checks, and the house rules a change has to keep (among them, no comments in code, and kit changes that leave every existing example byte-identical). Please follow the [Code of Conduct](CODE_OF_CONDUCT.md), and report security problems as described in [SECURITY.md](SECURITY.md).
