@@ -19,7 +19,6 @@ All notable changes to Anatomy are recorded here. The format follows [Keep a Cha
 - Honor explicit capture, drive and line-check selectors, and scope reported readouts to the requested figure.
 - Decode valid SVG attribute quotes, whitespace and XML character references in audit bounds.
 - Exclude invisible empty clip intersections from authored SVG bounds.
-
 - `scripts/drive.mjs` now fails when a browser evaluation throws or rejects, rather than reporting a clean successful session.
 - The arcade cabinet now accepts coins with reduced motion enabled, preserving the meter, credit and power-on events when the coin animation is skipped.
 - The turning dial stops its idle tour when reduced motion is enabled while the page is open and cancels its pending automatic restart while preserving keyboard and pointer input.
@@ -49,7 +48,6 @@ All notable changes to Anatomy are recorded here. The format follows [Keep a Cha
 - React `Dots` retains the kit's optional per-point opacity, including fading bolt circles and pulsing dots, while ordinary points remain opaque.
 - Write the first readout value even when empty or issued before passive binding.
 - Measure transformed rectangular and round SVG primitives through their true affine bounds.
-
 - `examples/test-rig/` drew its glass button dark in the light theme. `stretch.css` now has light values for its own colours.
 
 ### Changed
