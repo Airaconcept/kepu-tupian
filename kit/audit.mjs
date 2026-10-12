@@ -1392,11 +1392,19 @@ function matrixOf(text) {
 
 const NUMBER = /-?(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?/gi;
 
+const attributeOf = (attrs, name) => {
+  const hit = [...attrs.matchAll(/(?:^|\s)([^\s=/>]+)\s*=\s*(["'])([\s\S]*?)\2/g)].find((match) => match[1] === name);
+  if (!hit) return null;
+  const named = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'" };
+  return hit[3].replace(/&(#x[0-9a-fA-F]+|#\d+|amp|lt|gt|quot|apos);/g, (all, code) => {
+    if (code[0] !== "#") return named[code];
+    const value = code[1] === "x" ? parseInt(code.slice(2), 16) : Number(code.slice(1));
+    return value > 0 && value <= 0x10ffff ? String.fromCodePoint(value) : all;
+  });
+};
+
 function pointsOfShape(tag, attrs) {
-  const get = (name) => {
-    const hit = attrs.match(new RegExp(`(?:^|\\s)${name}="([^"]*)"`));
-    return hit ? hit[1] : null;
-  };
+  const get = (name) => attributeOf(attrs, name);
   const num = (name) => Number(get(name) ?? 0);
   if (tag === "path") {
     const d = get("d") ?? "";
@@ -1476,12 +1484,12 @@ const meetBox = (a, b) => (!a || !b ? a ?? null : [Math.max(a[0], b[0]), Math.ma
 const areaOf = (box) => (box ? Math.max(0, box[2] - box[0]) * Math.max(0, box[3] - box[1]) : 0);
 
 export function markupBox(svg) {
-  const tags = [...svg.matchAll(/<(\/?)([a-zA-Z]+)([^>]*?)(\/?)>/g)];
+  const tags = [...svg.matchAll(/<(\/?)([a-zA-Z]+)((?:"[^"]*"|'[^']*'|[^'">])*?)(\/?)>/g)];
   const clips = new Map();
   let clipId = null;
   for (const [, close, tag, attrs, self] of tags) {
     if (tag === "clipPath" && !close) {
-      clipId = self ? null : (attrs.match(/id="([^"]*)"/) ?? [])[1] ?? null;
+      clipId = self ? null : attributeOf(attrs, "id");
       continue;
     }
     if (clipId) {
@@ -1489,7 +1497,7 @@ export function markupBox(svg) {
         clipId = null;
         continue;
       }
-      clips.set(clipId, unionBox(clips.get(clipId), boxOfShape(tag, attrs, matrixOf((attrs.match(/transform="([^"]*)"/) ?? [])[1]))));
+      clips.set(clipId, unionBox(clips.get(clipId), boxOfShape(tag, attrs, matrixOf(attributeOf(attrs, "transform")))));
     }
   }
   const stack = [{ m: [1, 0, 0, 1, 0, 0], clip: null, skip: false }];
@@ -1500,10 +1508,10 @@ export function markupBox(svg) {
       if (stack.length > 1) stack.pop();
       continue;
     }
-    const m = multiply(top.m, matrixOf((attrs.match(/transform="([^"]*)"/) ?? [])[1]));
-    const ref = (attrs.match(/clip-path="url\(#([^)]*)\)"/) ?? [])[1];
+    const m = multiply(top.m, matrixOf(attributeOf(attrs, "transform")));
+    const ref = ((attributeOf(attrs, "clip-path") ?? "").match(/url\(#([^)]*)\)/) ?? [])[1];
     const own = ref && clips.get(ref) ? boxOfPoints(cornersOfBox(clips.get(ref)), m) : null;
-    const frame = { m, clip: own ? meetBox(top.clip ?? own, own) : top.clip, skip: top.skip || ["defs", "clipPath", "mask", "linearGradient", "radialGradient", "pattern", "text", "title"].includes(tag) || /class="[^"]*iso-halo/.test(attrs) };
+    const frame = { m, clip: own ? meetBox(top.clip ?? own, own) : top.clip, skip: top.skip || ["defs", "clipPath", "mask", "linearGradient", "radialGradient", "pattern", "text", "title"].includes(tag) || (attributeOf(attrs, "class") ?? "").includes("iso-halo") };
     if (!frame.skip) {
       const shape = boxOfShape(tag, attrs, m);
       if (shape) box = unionBox(box, frame.clip ? meetBox(shape, frame.clip) : shape);
