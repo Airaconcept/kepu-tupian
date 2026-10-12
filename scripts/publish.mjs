@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { cpSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, readlinkSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, readlinkSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { fingerprintOfSkill } from "./fingerprint.mjs";
@@ -20,9 +20,10 @@ function usage(message) {
 
   node scripts/publish.mjs <figure folder> --into <anatomy-community clone> --id <kebab-id> --title "..." --prompt "..." --author <github user>
       [--agent "Claude Code"|OpenCode|Codex|Other] [--model "..."] [--license MIT|CC-BY-4.0] [--tags a,b]
-      [--build build.mjs] [--pages dark.html,light.html] [--kind "SVG + WebGL"] [--audit] [--no-poster] [--force]
+      [--build build.mjs] [--pages dark.html,light.html] [--kind "SVG + WebGL"] [--audit] [--force]
 
-The figure must be framework-free: a build script that writes standalone pages next to itself.
+The figure must be plain HTML: a build script that writes standalone pages next to itself, with a light page.
+Only the source is copied, to figures/<author>/<id>/: the gallery's CI builds the pages and the poster.
 Nothing is pushed: the command prints the git and gh commands to run when you are ready.`);
   process.exit(message ? 1 : 0);
 }
@@ -41,7 +42,6 @@ function parse(argv) {
     else if (arg === "--tags") options.tags = take(index++).split(",").map((tag) => tag.trim()).filter(Boolean);
     else if (arg === "--pages") options.pages = take(index++).split(",").map((page) => page.trim());
     else if (arg === "--audit") options.audit = true;
-    else if (arg === "--no-poster") options.noPoster = true;
     else if (arg === "--force") options.force = true;
     else if (arg.startsWith("--")) usage(`unknown option ${arg}`);
     else if (!options.source) options.source = arg;
@@ -114,21 +114,25 @@ export function publish(options) {
   if (!existsSync(join(source, options.build))) throw new Error(`no ${options.build} in ${source}`);
   if (!existsSync(join(repo, "figures")) || !existsSync(join(repo, "scripts", "validate.mjs"))) throw new Error(`${repo} doesn't look like a clone of anatomy-community (no figures/ or scripts/validate.mjs)`);
   if (inside(SKILL, source) && !inside(join(SKILL, "examples"), source)) throw new Error("the figure folder is inside the skill itself; publish the folder where the figure was built");
-  const dest = join(repo, "figures", options.id);
+  const author = options.author.replace(/^@/, "");
+  if (!/^[A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38}$/.test(author)) throw new Error("--author must be a GitHub username");
+  const dest = join(repo, "figures", author.toLowerCase(), options.id);
   if (existsSync(dest)) {
-    if (!options.force) throw new Error(`figures/${options.id} already exists; pick another --id or pass --force to replace it`);
+    if (!options.force) throw new Error(`figures/${author.toLowerCase()}/${options.id} already exists; pick another --id or pass --force to replace it`);
     rmSync(dest, { recursive: true, force: true });
   }
 
   const all = listFiles(source);
-  const files = all.filter((file) => SOURCE_TYPES.includes(extname(file).toLowerCase()));
-  const skipped = all.filter((file) => !files.includes(file));
-  const pages = detectPages(source, files, options.pages);
-  for (const page of Object.values(pages)) if (page && !files.includes(page)) throw new Error(`page ${page} not found in ${source}; build the figure first`);
+  const typed = all.filter((file) => SOURCE_TYPES.includes(extname(file).toLowerCase()));
+  const pages = detectPages(source, typed, options.pages);
+  for (const page of Object.values(pages)) if (page && !typed.includes(page)) throw new Error(`page ${page} not found in ${source}; build the figure first`);
   const themeOf = (page) => (readFileSync(join(source, page), "utf8").match(/<body[^>]*\bdata-theme="(light|dark)"/) ?? [])[1] ?? "dark";
   if (pages.dark && !pages.light && themeOf(pages.dark) === "light") [pages.light, pages.dark] = [pages.dark, undefined];
   if (!pages.light) throw new Error("the gallery shows figures in the light theme: build the light page too (node build.mjs --light), then publish again");
   for (const [key, page] of Object.entries(pages)) if (page && themeOf(page) !== key) throw new Error(`${page} is a ${themeOf(page)} page, not ${key}; pass --pages dark.html,light.html in that order`);
+  const outputs = new Set(Object.values(pages).filter(Boolean));
+  const files = typed.filter((file) => !outputs.has(file) && !/-verify(?:-light)?\.html$/.test(file));
+  const skipped = all.filter((file) => !files.includes(file) && !outputs.has(file));
 
   const skillLink = join(repo, ".skill");
   const kit = fingerprintOfSkill(SKILL);
@@ -160,12 +164,12 @@ export function publish(options) {
   const build = [[`src/${options.build}`, "--light"]];
   if (pages.dark) build.push([`src/${options.build}`]);
   for (const command of build) run(command, dest);
-
   const pageText = Object.values(pages).filter(Boolean).map((page) => readFileSync(join(dest, "src", page), "utf8")).join("\n");
+  for (const page of outputs) rmSync(join(dest, "src", page), { force: true });
   const figure = {
     id: options.id,
     title: options.title.trim(),
-    author: options.author.replace(/^@/, ""),
+    author,
     prompt: options.prompt.trim(),
     kind: options.kind ?? detectKind(pageText),
     agent: options.agent,
@@ -180,12 +184,6 @@ export function publish(options) {
   };
   writeFileSync(join(dest, "figure.json"), JSON.stringify(figure, null, 2) + "\n");
 
-  if (!options.noPoster) {
-    const page = join(dest, "src", pages.light);
-    run([join(SKILL, "scripts", "capture.mjs"), page, "--width", "1200", "--out", join(dest, "poster.png")], dest);
-    const size = statSync(join(dest, "poster.png")).size;
-    if (size > 600 << 10) throw new Error(`poster.png is ${(size / 1024).toFixed(0)} KB, over 600 KB; retake it smaller with scripts/capture.mjs --width 900`);
-  }
   return { dest, figure, skipped, linked };
 }
 
@@ -194,11 +192,12 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   try {
     const { dest, figure, skipped, linked } = publish(options);
     const repo = resolve(options.into);
-    console.log(`published figures/${figure.id} (${figure.kind}, kit ${figure.skill.kit.slice(7, 19)})`);
+    console.log(`published figures/${figure.author.toLowerCase()}/${figure.id} (${figure.kind}, kit ${figure.skill.kit.slice(7, 19)}): source only, the gallery builds the pages`);
     if (skipped.length) console.log(`  left out (not a source type): ${skipped.join(", ")}`);
     console.log(`  .skill link: ${linked}`);
-    console.log(`\nCheck it:\n  cd ${repo}\n  node scripts/validate.mjs figures/${figure.id}`);
-    console.log(`\nWhen you are happy with it, from your fork of anatomy-community:\n  git switch -c figure/${figure.id}\n  git add figures/${figure.id}\n  git commit -m "Add ${figure.title.replace(/"/g, "'")}"\n  git push -u origin figure/${figure.id}\n  gh pr create --repo wheresryan22/anatomy-community --fill`);
+    const where = `figures/${figure.author.toLowerCase()}/${figure.id}`;
+    console.log(`\nCheck it:\n  cd ${repo}\n  node scripts/validate.mjs ${where}`);
+    console.log(`\nWhen you are happy with it, from your fork of anatomy-community:\n  git switch -c figure/${figure.id}\n  git add ${where}\n  git commit -m "Add ${figure.title.replace(/"/g, "'")}"\n  git push -u origin figure/${figure.id}\n  gh pr create --repo wheresryan22/anatomy-community --fill`);
   } catch (error) {
     console.error(`publish: ${error.message}`);
     process.exit(1);

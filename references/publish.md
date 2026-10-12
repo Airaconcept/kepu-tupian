@@ -21,11 +21,11 @@ Publish only when the user asks to share or publish a figure. Never push, fork o
      [--agent "Claude Code"|OpenCode|Codex|Other] [--model "..."] [--license MIT|CC-BY-4.0] \
      [--tags a,b] [--audit] [--pages dark.html,light.html]
    ```
-   Pass `--agent` for the agent you are running in. It copies the figure's source into `figures/<id>/src/`, points its kit imports at the clone's `.skill/` link, records the kit fingerprint, rebuilds the pages there and takes `poster.png`.
+   Pass `--agent` for the agent you are running in. It copies only the figure's source into `figures/<author>/<id>/src/`, points its kit imports at the clone's `.skill/` link, records the kit fingerprint, checks the build works and removes what it built: the gallery keeps source only, and its CI builds the pages and the poster.
    - If it says a file reaches outside the figure folder and the skill, copy what that file needs into the figure folder, rebuild, and publish again.
    - If it can't tell which pages are the figure, pass `--pages`.
-5. **Validate inside the clone:** `node scripts/validate.mjs figures/<id>` must end `passed`. Fix what it names. It runs the same checks as the gallery's CI, which also fetches the exact skill version from GitHub.
-6. **Show the user** the poster and the result, then give them the git and `gh` commands the publish script printed. They run them.
+5. **Validate inside the clone:** `node scripts/validate.mjs figures/<author>/<id>` must end `passed`. Fix what it names. With Docker running (`docker build --platform linux/amd64 -t anatomy-sandbox:local sandbox` once), it runs the build in the same locked, network-less container as the gallery's CI; without Docker it still checks everything except the network isolation.
+6. **Show the user** the poster and screenshots in `shots/<author>-<id>/`, then give them the git and `gh` commands the publish script printed. They run them.
 
 ## What the gallery rejects
 
@@ -34,6 +34,7 @@ Publish only when the user asks to share or publish a figure. Never push, fork o
 - frames, cookies, or reaching the page around the figure;
 - build imports other than the skill, the figure's own files and `node:fs`, `node:path`, `node:url`, `node:crypto` or `node:process`;
 - reading environment variables;
-- files other than source text under `src/`;
-- pages that the build does not reproduce exactly.
+- files other than source text under `src/`, or committed built pages;
+- builds that write anything but their pages, or that differ between two runs;
+- figures that keep moving with reduced motion on.
 Write figures that way from the start if the user plans to share them.
