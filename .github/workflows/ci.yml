@@ -31,6 +31,8 @@ jobs:
         run: |
           npm install --prefix "$RUNNER_TEMP/anatomy-react-tests" --no-package-lock --no-save react@19.3.0 react-dom@19.3.0 esbuild@0.28.2
           NODE_PATH="$RUNNER_TEMP/anatomy-react-tests/node_modules" node --test scripts/react-readout-first-write.test.mjs
+      - name: Native affine SVG bounds
+        run: node --test scripts/audit-affine-bounds.test.mjs
 
       - name: Dial indicator
         run: |
