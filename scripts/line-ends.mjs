@@ -1,5 +1,6 @@
 function lineEnds({ select = null, tolerance = 1, root: rootSlack = 2, mark = 7, least = 0.3, cover = 0.5, show = false } = {}) {
-  const plate = (select && document.querySelector(select)) || document.querySelector(".iso-plate") || document.body;
+  const plate = select == null ? document.querySelector(".iso-plate") || document.body : document.querySelector(select);
+  if (!plate) throw new Error(`Line target not found: ${select}`);
   const box = plate.getBoundingClientRect();
   const style = document.createElement("style");
   style.textContent = `${select || ".iso-plate"} *{pointer-events:none!important}${select || ".iso-plate"} svg,${select || ".iso-plate"} svg *{pointer-events:visiblePainted!important}`;
@@ -123,7 +124,18 @@ function lineEnds({ select = null, tolerance = 1, root: rootSlack = 2, mark = 7,
     }
     if (tag === "rect") {
       const [x, y, w, h] = [num("x"), num("y"), num("width"), num("height")];
-      return [{ points: [[x, y], [x + w, y], [x + w, y + h], [x, y + h], [x, y]], closed: true }];
+      const rx = Math.min(w / 2, Math.max(0, el.hasAttribute("rx") ? num("rx") : num("ry")));
+      const ry = Math.min(h / 2, Math.max(0, el.hasAttribute("ry") ? num("ry") : num("rx")));
+      if (!rx || !ry) return [{ points: [[x, y], [x + w, y], [x + w, y + h], [x, y + h], [x, y]], closed: true }];
+      const points = [];
+      for (const [cx, cy, start] of [[x + w - rx, y + ry, -Math.PI / 2], [x + w - rx, y + h - ry, 0], [x + rx, y + h - ry, Math.PI / 2], [x + rx, y + ry, Math.PI]]) {
+        for (let index = 0; index <= 32; index++) {
+          const angle = start + index * Math.PI / 64;
+          points.push([cx + rx * Math.cos(angle), cy + ry * Math.sin(angle)]);
+        }
+      }
+      points.push(points[0]);
+      return [{ points, closed: true }];
     }
     return [];
   };

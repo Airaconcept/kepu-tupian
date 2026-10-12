@@ -883,6 +883,7 @@ export function clearances(tubes, solids, { ratio = 0.5, least = 0.2, spacing = 
   };
   const poseOf = new Map([...tubes, ...solids].map((shape) => [shape, placed(shape, state)]));
   const offsets = new Map([...tubes, ...solids].map((shape) => [shape, offsetAt(shape, state)]));
+  const widest = new Map(tubes.map((tube) => [tube, poseOf.get(tube).radii.reduce((r, next) => Math.max(r, next), 0)]));
   const together = (a, b) => len3(sub3(offsets.get(a), offsets.get(b))) < 0.05;
   const runsBy = new Map();
   for (const tube of tubes) runsBy.set(tube.owner, [...(runsBy.get(tube.owner) ?? []), tube]);
@@ -927,9 +928,9 @@ export function clearances(tubes, solids, { ratio = 0.5, least = 0.2, spacing = 
       if (matches(tube.touch, shape.name) || matches(shape.touch, tube.name)) continue;
       const other = poseOf.get(shape);
       const ob = boundsOf(other);
-      if (!overlaps(tb, ob, 4)) continue;
+      if (!overlaps(tb, ob, Math.max(4, gapOf(widest.get(tube))))) continue;
       for (const sample of samples) {
-        if (!overlaps({ min: sample.p, max: sample.p }, ob, sample.r + 3)) continue;
+        if (!overlaps({ min: sample.p, max: sample.p }, ob, sample.r + Math.max(3, gapOf(sample.r)))) continue;
         const gap = gapOf(sample.r);
         const clearance = clearanceTo(other, sample);
         if (clearance >= gap) continue;
@@ -947,10 +948,13 @@ export function clearances(tubes, solids, { ratio = 0.5, least = 0.2, spacing = 
       const tb = poseOf.get(tubes[b]);
       if (tubes[a].owner && tubes[a].owner === tubes[b].owner && tubes[a].joined) continue;
       if (matches(tubes[a].touch, tubes[b].name) || matches(tubes[b].touch, tubes[a].name)) continue;
-      if (!overlaps(boundsOf(ta), boundsOf(tb), 3)) continue;
       const bundled = tubes[a].bundle && tubes[a].bundle === tubes[b].bundle;
+      const widestB = widest.get(tubes[b]);
+      const envelope = bundled ? 3 : Math.max(3, gapOf(Math.min(widest.get(tubes[a]), widestB)));
+      if (!overlaps(boundsOf(ta), boundsOf(tb), envelope)) continue;
       for (const sample of samples) {
-        if (!overlaps({ min: sample.p, max: sample.p }, boundsOf(tb), sample.r + 3)) continue;
+        const envelope = bundled ? 3 : Math.max(3, gapOf(Math.min(sample.r, widestB)));
+        if (!overlaps({ min: sample.p, max: sample.p }, boundsOf(tb), sample.r + envelope)) continue;
         const clearance = sample.edge >= sample.r ? sdf(tb, sample.p) - sample.r : Math.min(...ringAround(sample, sample.r).map((q) => sdf(tb, q)));
         const r = centreline(tb, sample.p).r;
         const gap = bundled ? touching : gapOf(Math.min(sample.r, r));
@@ -1368,7 +1372,7 @@ const multiply = (m, n) => [m[0] * n[0] + m[2] * n[1], m[1] * n[0] + m[3] * n[1]
 function matrixOf(text) {
   let m = [1, 0, 0, 1, 0, 0];
   if (!text) return m;
-  for (const [, kind, args] of text.matchAll(/(matrix|translate|scale|rotate)\s*\(([^)]*)\)/g)) {
+  for (const [, kind, args] of text.matchAll(/(matrix|translate|scale|rotate|skewX|skewY)\s*\(([^)]*)\)/g)) {
     const v = (args.match(/-?(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?/gi) ?? []).map(Number);
     let n = [1, 0, 0, 1, 0, 0];
     if (kind === "matrix" && v.length === 6) n = v;
@@ -1379,6 +1383,8 @@ function matrixOf(text) {
       const [cx, cy] = [v[1] ?? 0, v[2] ?? 0];
       n = multiply(multiply([1, 0, 0, 1, cx, cy], [Math.cos(a), Math.sin(a), -Math.sin(a), Math.cos(a), 0, 0]), [1, 0, 0, 1, -cx, -cy]);
     }
+    else if (kind === "skewX") n = [1, 0, Math.tan((v[0] ?? 0) * Math.PI / 180), 1, 0, 0];
+    else if (kind === "skewY") n = [1, Math.tan((v[0] ?? 0) * Math.PI / 180), 0, 1, 0, 0];
     m = multiply(m, n);
   }
   return m;
@@ -1386,11 +1392,19 @@ function matrixOf(text) {
 
 const NUMBER = /-?(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?/gi;
 
+const attributeOf = (attrs, name) => {
+  const hit = [...attrs.matchAll(/(?:^|\s)([^\s=/>]+)\s*=\s*(["'])([\s\S]*?)\2/g)].find((match) => match[1] === name);
+  if (!hit) return null;
+  const named = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'" };
+  return hit[3].replace(/&(#x[0-9a-fA-F]+|#\d+|amp|lt|gt|quot|apos);/g, (all, code) => {
+    if (code[0] !== "#") return named[code];
+    const value = code[1] === "x" ? parseInt(code.slice(2), 16) : Number(code.slice(1));
+    return value > 0 && value <= 0x10ffff ? String.fromCodePoint(value) : all;
+  });
+};
+
 function pointsOfShape(tag, attrs) {
-  const get = (name) => {
-    const hit = attrs.match(new RegExp(`(?:^|\\s)${name}="([^"]*)"`));
-    return hit ? hit[1] : null;
-  };
+  const get = (name) => attributeOf(attrs, name);
   const num = (name) => Number(get(name) ?? 0);
   if (tag === "path") {
     const d = get("d") ?? "";
@@ -1434,7 +1448,7 @@ function pointsOfShape(tag, attrs) {
     return [[num("cx") - r, num("cy") - ry], [num("cx") + r, num("cy") + ry]];
   }
   if (tag === "line") return [[num("x1"), num("y1")], [num("x2"), num("y2")]];
-  if (tag === "rect") return [[num("x"), num("y")], [num("x") + num("width"), num("y") + num("height")]];
+  if (tag === "rect") return cornersOfBox([num("x"), num("y"), num("x") + num("width"), num("y") + num("height")]);
   if (tag === "polyline" || tag === "polygon") {
     const v = (get("points") ?? "").match(NUMBER)?.map(Number) ?? [];
     const out = [];
@@ -1453,17 +1467,35 @@ const boxOfPoints = (points, m) => {
   }
   return box;
 };
+const cornersOfBox = ([x0, y0, x1, y1]) => [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
+const boxOfShape = (tag, attrs, m) => {
+  if (tag !== "circle" && tag !== "ellipse") return boxOfPoints(pointsOfShape(tag, attrs), m);
+  const num = (name) => Number(attributeOf(attrs, name) ?? 0);
+  const rx = tag === "circle" ? num("r") : num("rx");
+  const ry = tag === "circle" ? rx : num("ry");
+  const x = m[0] * num("cx") + m[2] * num("cy") + m[4];
+  const y = m[1] * num("cx") + m[3] * num("cy") + m[5];
+  const dx = Math.hypot(m[0] * rx, m[2] * ry);
+  const dy = Math.hypot(m[1] * rx, m[3] * ry);
+  return [x - dx, y - dy, x + dx, y + dy];
+};
 const unionBox = (a, b) => (!a ? b : !b ? a : [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[2], b[2]), Math.max(a[3], b[3])]);
-const meetBox = (a, b) => (!a || !b ? a ?? null : [Math.max(a[0], b[0]), Math.max(a[1], b[1]), Math.min(a[2], b[2]), Math.min(a[3], b[3])]);
+const meetBox = (a, b) => {
+  if (!a || !b) return a ?? null;
+  const box = [Math.max(a[0], b[0]), Math.max(a[1], b[1]), Math.min(a[2], b[2]), Math.min(a[3], b[3])];
+  return box[0] <= box[2] && box[1] <= box[3] ? box : null;
+};
 const areaOf = (box) => (box ? Math.max(0, box[2] - box[0]) * Math.max(0, box[3] - box[1]) : 0);
 
 export function markupBox(svg) {
-  const tags = [...svg.matchAll(/<(\/?)([a-zA-Z]+)([^>]*?)(\/?)>/g)];
+  const tags = [...svg.matchAll(/<(\/?)([a-zA-Z]+)((?:"[^"]*"|'[^']*'|[^'">])*?)(\/?)>/g)];
   const clips = new Map();
   let clipId = null;
   for (const [, close, tag, attrs, self] of tags) {
     if (tag === "clipPath" && !close) {
-      clipId = self ? null : (attrs.match(/id="([^"]*)"/) ?? [])[1] ?? null;
+      const id = attributeOf(attrs, "id");
+      if (id) clips.set(id, null);
+      clipId = self ? null : id;
       continue;
     }
     if (clipId) {
@@ -1471,7 +1503,7 @@ export function markupBox(svg) {
         clipId = null;
         continue;
       }
-      clips.set(clipId, unionBox(clips.get(clipId), boxOfPoints(pointsOfShape(tag, attrs), matrixOf((attrs.match(/transform="([^"]*)"/) ?? [])[1]))));
+      clips.set(clipId, unionBox(clips.get(clipId), boxOfShape(tag, attrs, matrixOf(attributeOf(attrs, "transform")))));
     }
   }
   const stack = [{ m: [1, 0, 0, 1, 0, 0], clip: null, skip: false }];
@@ -1482,12 +1514,14 @@ export function markupBox(svg) {
       if (stack.length > 1) stack.pop();
       continue;
     }
-    const m = multiply(top.m, matrixOf((attrs.match(/transform="([^"]*)"/) ?? [])[1]));
-    const ref = (attrs.match(/clip-path="url\(#([^)]*)\)"/) ?? [])[1];
-    const own = ref && clips.get(ref) ? boxOfPoints([[clips.get(ref)[0], clips.get(ref)[1]], [clips.get(ref)[2], clips.get(ref)[3]]], m) : null;
-    const frame = { m, clip: own ? meetBox(top.clip ?? own, own) : top.clip, skip: top.skip || ["defs", "clipPath", "mask", "linearGradient", "radialGradient", "pattern", "text", "title"].includes(tag) || /class="[^"]*iso-halo/.test(attrs) };
+    const m = multiply(top.m, matrixOf(attributeOf(attrs, "transform")));
+    const ref = ((attributeOf(attrs, "clip-path") ?? "").match(/url\(#([^)]*)\)/) ?? [])[1];
+    const own = ref && clips.get(ref) ? boxOfPoints(cornersOfBox(clips.get(ref)), m) : null;
+    const clip = own ? meetBox(top.clip ?? own, own) : top.clip;
+    const empty = ref && clips.has(ref) && (!own || areaOf(own) === 0 || (top.clip && (!clip || areaOf(clip) === 0)));
+    const frame = { m, clip, skip: Boolean(empty) || top.skip || ["defs", "clipPath", "mask", "linearGradient", "radialGradient", "pattern", "text", "title"].includes(tag) || (attributeOf(attrs, "class") ?? "").includes("iso-halo") };
     if (!frame.skip) {
-      const shape = boxOfPoints(pointsOfShape(tag, attrs), m);
+      const shape = boxOfShape(tag, attrs, m);
       if (shape) box = unionBox(box, frame.clip ? meetBox(shape, frame.clip) : shape);
     }
     if (!self) stack.push(frame);
