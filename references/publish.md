@@ -13,7 +13,7 @@ Publish only when the user asks to share or publish a figure. Never send anythin
    - the license: MIT (the default) or CC-BY-4.0;
    - confirmation that it is their own work and they are happy to share it.
    The prompt is the request that made the figure; reuse it, trimmed to 600 characters.
-3. **Get a local clone of the gallery,** if they have none: `gh repo clone wheresryan22/anatomy-community`. Cloning the main repository is fine: the submit step makes a fork for them if they need one.
+3. **Get a local clone of the gallery,** if they have none: `gh repo clone wheresryan22/anatomy-community -- --single-branch` (only `main`: the previews branch holds every image and grows large). Cloning the main repository is fine: the submit step makes a fork for them if they need one.
 4. **Show the plan,** without doing anything:
    ```sh
    node <skill>/scripts/publish.mjs <figure folder> --into <clone> --id <kebab-id> \
