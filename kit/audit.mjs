@@ -1470,7 +1470,7 @@ const boxOfPoints = (points, m) => {
 const cornersOfBox = ([x0, y0, x1, y1]) => [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
 const boxOfShape = (tag, attrs, m) => {
   if (tag !== "circle" && tag !== "ellipse") return boxOfPoints(pointsOfShape(tag, attrs), m);
-  const num = (name) => Number((attrs.match(new RegExp(`(?:^|\\s)${name}="([^"]*)"`)) ?? [])[1] ?? 0);
+  const num = (name) => Number(attributeOf(attrs, name) ?? 0);
   const rx = tag === "circle" ? num("r") : num("rx");
   const ry = tag === "circle" ? rx : num("ry");
   const x = m[0] * num("cx") + m[2] * num("cy") + m[4];
@@ -1480,7 +1480,11 @@ const boxOfShape = (tag, attrs, m) => {
   return [x - dx, y - dy, x + dx, y + dy];
 };
 const unionBox = (a, b) => (!a ? b : !b ? a : [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[2], b[2]), Math.max(a[3], b[3])]);
-const meetBox = (a, b) => (!a || !b ? a ?? null : [Math.max(a[0], b[0]), Math.max(a[1], b[1]), Math.min(a[2], b[2]), Math.min(a[3], b[3])]);
+const meetBox = (a, b) => {
+  if (!a || !b) return a ?? null;
+  const box = [Math.max(a[0], b[0]), Math.max(a[1], b[1]), Math.min(a[2], b[2]), Math.min(a[3], b[3])];
+  return box[0] <= box[2] && box[1] <= box[3] ? box : null;
+};
 const areaOf = (box) => (box ? Math.max(0, box[2] - box[0]) * Math.max(0, box[3] - box[1]) : 0);
 
 export function markupBox(svg) {
@@ -1489,7 +1493,9 @@ export function markupBox(svg) {
   let clipId = null;
   for (const [, close, tag, attrs, self] of tags) {
     if (tag === "clipPath" && !close) {
-      clipId = self ? null : attributeOf(attrs, "id");
+      const id = attributeOf(attrs, "id");
+      if (id) clips.set(id, null);
+      clipId = self ? null : id;
       continue;
     }
     if (clipId) {
@@ -1511,7 +1517,9 @@ export function markupBox(svg) {
     const m = multiply(top.m, matrixOf(attributeOf(attrs, "transform")));
     const ref = ((attributeOf(attrs, "clip-path") ?? "").match(/url\(#([^)]*)\)/) ?? [])[1];
     const own = ref && clips.get(ref) ? boxOfPoints(cornersOfBox(clips.get(ref)), m) : null;
-    const frame = { m, clip: own ? meetBox(top.clip ?? own, own) : top.clip, skip: top.skip || ["defs", "clipPath", "mask", "linearGradient", "radialGradient", "pattern", "text", "title"].includes(tag) || (attributeOf(attrs, "class") ?? "").includes("iso-halo") };
+    const clip = own ? meetBox(top.clip ?? own, own) : top.clip;
+    const empty = ref && clips.has(ref) && (!own || areaOf(own) === 0 || (top.clip && (!clip || areaOf(clip) === 0)));
+    const frame = { m, clip, skip: Boolean(empty) || top.skip || ["defs", "clipPath", "mask", "linearGradient", "radialGradient", "pattern", "text", "title"].includes(tag) || (attributeOf(attrs, "class") ?? "").includes("iso-halo") };
     if (!frame.skip) {
       const shape = boxOfShape(tag, attrs, m);
       if (shape) box = unionBox(box, frame.clip ? meetBox(shape, frame.clip) : shape);
