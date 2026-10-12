@@ -236,10 +236,16 @@ async function main() {
         const limit = Date.now() + (args[1] ?? 10000);
         let ok = false;
         while (Date.now() < limit) {
-          if (await evaluate(`Boolean(${args[0]})`)) {
-            ok = true;
-            break;
+          let timer;
+          try {
+            ok = await Promise.race([
+              evaluate(`Promise.resolve(${args[0]}).then(Boolean)`),
+              new Promise((done) => { timer = setTimeout(() => done(false), Math.max(0, limit - Date.now())); }),
+            ]);
+          } finally {
+            clearTimeout(timer);
           }
+          if (ok) break;
           await sleep(25);
         }
         if (!ok) throw new Error(`until: timed out waiting for ${args[0]}`);
