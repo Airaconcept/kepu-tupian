@@ -165,7 +165,7 @@ export function publish(options) {
 
   let linked = "existing";
   if (!existsSync(skillLink)) {
-    symlinkSync(SKILL, skillLink, "dir");
+    symlinkSync(SKILL, skillLink, process.platform === "win32" ? "junction" : "dir");
     linked = "created";
   } else if (fingerprintOfSkill(skillLink) !== kit) {
     const where = lstatSync(skillLink).isSymbolicLink() ? readlinkSync(skillLink) : skillLink;
