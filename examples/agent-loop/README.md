@@ -20,9 +20,11 @@ node ../../scripts/capture.mjs agent-loop.html --out preview.png
 ## 出多平台配图
 
 ```bash
-node ../../scripts/render-static.mjs agent-loop.html --t 0.68 \
+node build.mjs --static=0.68   # 先烘焙静态帧（定格在"执行"那一帧）
+node ../../scripts/render-static.mjs agent-loop-static.html \
   --aspect 16:9 --title "Agent 循环机" --out /tmp/agent-16x9.png
 ```
+注意：render-static 的输入必须是 `--static` 烘焙出的静态 HTML，直接传动画版会抓到随机帧。
 
 比例可选 `16:9`（X/B站）`1:1`（IG/Threads/FB）`4:5`（IG）`3:4`（小红书）`9:16`（TikTok），
 非 16:9 会自动套版：母版图完整保留，上下加标题区，不硬裁。
