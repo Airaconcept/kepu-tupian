@@ -16,7 +16,7 @@
 //       改 story(t) 里的时间轴分段，改 readout 里的中文文案。
 // ============================================================
 import { writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as k from "../../kit/iso-kit.mjs";
 import { kitScript } from "../../scripts/inline-kit.mjs";
@@ -26,9 +26,12 @@ const WIDTH = 1160;
 const HEIGHT = 640;
 
 // --static=0.68：烘焙一帧确定性画面（社交平台配图用，定格在故事帧）
+// --out <文件>：指定输出文件名（视频模式逐帧输出用）
 const staticArg = process.argv.find((a) => a.startsWith("--static="));
 const STATIC_T = staticArg ? parseFloat(staticArg.slice(9)) : null;
-const OUT = STATIC_T === null ? "agent-loop.html" : "agent-loop-static.html";
+const outArg = process.argv.find((a) => a.startsWith("--out="));
+const OUT = outArg ? outArg.slice(6)
+  : STATIC_T === null ? "agent-loop.html" : "agent-loop-static.html";
 
 // ---- world layout: rail is the spine, press at its end ----
 const PLATE = { x: -204, y: -82, w: 408, d: 164, r: 10 };
@@ -391,5 +394,5 @@ const body = k.plateHtml({
   body: `<div class="iso-stage" tabindex="0" role="img" aria-label="Agent 循环机：感知决策执行观察的一轮循环">${svg}</div>`,
 });
 
-writeFileSync(join(HERE, OUT), k.pageHtml({ title: "Agent 循环机", theme: "light", body, script: kitScript() + live }));
+writeFileSync(resolve(HERE, OUT), k.pageHtml({ title: "Agent 循环机", theme: "light", body, script: kitScript() + live }));
 console.log("wrote", OUT);
