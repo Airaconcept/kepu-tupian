@@ -25,7 +25,9 @@ npx skills add Airaconcept/kepu-tupian -g
 2. **写 build.mjs**：用 `node examples/<最接近的>/build.mjs` 的写法，输出一个独立 HTML（SVG 等距投影 + 可选 WebGL）。所有数字（读数、刻度、计数）必须来自驱动零件运动的同一个模型，不能手写假数字。
 3. **跑起来**：`node build.mjs` 生成 HTML，浏览器打开确认动画正常。
 4. **截图验收**：`node scripts/capture.mjs <file>.html --out preview.png`，看控制台是否干净，看构图有没有穿帮、遮挡、留白失衡。有问题回第 2 步改。
-5. **出多平台图**：`node scripts/render-static.mjs <file>.html --t <故事帧> --aspect <比例> --title "标题" --out out.png`，见 `docs/platforms.md` 选比例。
+5. **出多平台图**：先定格故事帧 `node build.mjs --static=<t>`（如 `--static=0.68`），
+   再 `node scripts/render-static.mjs <静态.html> --aspect <比例> --title "标题" --out out.png`，
+   见 `docs/platforms.md` 选比例。注意 render-static 的输入必须是静态烘焙版 HTML，不能直接传动画版。
 
 ## 画图铁律（违反任何一条都算失败）
 
@@ -55,4 +57,8 @@ npx skills add Airaconcept/kepu-tupian -g
 ## 完整中文示例
 
 `examples/agent-loop/`：一台"Agent 循环机"——感知→决策→执行→观察。中文注释，照着改就能用。
-`node examples/agent-loop/build.mjs && node scripts/render-static.mjs examples/agent-loop/agent-loop.html --t 0.68 --aspect 16:9 --title "Agent 循环机" --out /tmp/test.png`
+```bash
+node examples/agent-loop/build.mjs --static=0.68   # 先烘焙静态帧
+node scripts/render-static.mjs examples/agent-loop/agent-loop-static.html \
+  --aspect 16:9 --title "Agent 循环机" --out /tmp/test.png
+```
