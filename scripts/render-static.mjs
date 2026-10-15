@@ -33,17 +33,25 @@ const ASPECTS = {
 };
 
 function usage() {
-  console.log(`用法: node render-static.mjs <figure-static.html> --aspect <比例> --title <标题> [选项]
+  console.log(`用法（静态图）: node render-static.mjs <figure-static.html> --aspect <比例> --title <标题> [选项]
 
   --aspect <16:9|1:1|4:5|3:4|9:16>  目标比例（默认 16:9）
   --title <文本>                     主标题（套版时显示在图上方）
   --subtitle <文本>                  副标题（可选，显示在主图下方）
   --out <png>                        输出路径（默认 ./static-<aspect>.png）
-  --width <px>                       母版截图视口宽（默认 1200）`);
+  --width <px>                       母版截图视口宽（默认 1200）
+
+用法（视频）: node render-static.mjs --video <build.mjs> --frames <N> --fps <F> --out <mp4>
+
+  --video <build.mjs>   figure 的构建脚本（须支持 --static=<t> 和 --out=<文件>）
+  --frames <N>          总帧数（默认 48）
+  --fps <F>             帧率（默认 24）
+  --out <mp4>           输出视频路径（默认 ./figure.mp4）
+  视频为 plate 原生尺寸（各帧自动对齐）；竖版视频暂不支持`);
 }
 
 function parse(argv) {
-  const o = { aspect: "16:9", title: "", subtitle: "", width: 1200 };
+  const o = { aspect: "16:9", title: "", subtitle: "", width: 1200, frames: 48, fps: 24 };
   const rest = [];
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i], next = () => argv[++i];
@@ -52,6 +60,9 @@ function parse(argv) {
     else if (a === "--subtitle") o.subtitle = next();
     else if (a === "--out") o.out = next();
     else if (a === "--width") o.width = Number(next());
+    else if (a === "--video") o.video = next();
+    else if (a === "--frames") o.frames = Number(next());
+    else if (a === "--fps") o.fps = Number(next());
     else if (a === "--help" || a === "-h") o.help = true;
     else rest.push(a);
   }
@@ -63,9 +74,46 @@ function esc(s) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+// 视频模式：对 build.mjs 按时间 t=0..1 烘焙 N 帧静态 HTML，逐帧截图后用 ffmpeg 合成 MP4。
+// 要求 build.mjs 支持 --static=<t> 和 --out=<文件> 两个参数（见 examples/agent-loop/build.mjs）。
+function renderVideo(o) {
+  const build = resolve(o.video);
+  const buildDir = dirname(build);
+  const N = o.frames, fps = o.fps;
+  const out = o.out || "figure.mp4";
+  const tmp = mkdtempSync(join(tmpdir(), "render-video-"));
+  const nodeArgs = process.execArgv.includes("--experimental-websocket")
+    ? [] : ["--experimental-websocket"];
+
+  console.error(`烘焙 ${N} 帧……`);
+  for (let i = 0; i < N; i++) {
+    const t = (i / (N - 1)).toFixed(4);
+    const frameHtml = join(tmp, `frame-${String(i).padStart(4, "0")}.html`);
+    const framePng = join(tmp, `frame-${String(i).padStart(4, "0")}.png`);
+    execFileSync(process.execPath, [build, `--static=${t}`, `--out=${frameHtml}`],
+      { cwd: buildDir, stdio: ["ignore", "pipe", "pipe"], timeout: 60000 });
+    execFileSync(process.execPath,
+      [...nodeArgs, CAPTURE, frameHtml, "--out", framePng,
+       "--width", "1280", "--height", "720",
+       "--scale", "1", "--wait", "800"],
+      { stdio: ["ignore", "pipe", "pipe"], timeout: 120000 });
+    if ((i + 1) % 12 === 0 || i === N - 1) console.error(`  ${i + 1}/${N}`);
+  }
+
+  console.error("合成视频……");
+  execFileSync("ffmpeg", ["-y", "-framerate", String(fps), "-i", join(tmp, "frame-%04d.png"),
+    "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "20", resolve(out)],
+    { stdio: ["ignore", "pipe", "pipe"], timeout: 300000 });
+  console.log(`saved ${out}`);
+}
+
 function main() {
   const o = parse(process.argv.slice(2));
-  if (o.help || !o.html) { usage(); process.exit(o.html ? 0 : 2); }
+  if (o.help || (!o.html && !o.video)) { usage(); process.exit(o.html || o.video ? 0 : 2); }
+
+  // 视频模式：逐帧烘焙静态 HTML → 截图 → ffmpeg 合成
+  if (o.video) { renderVideo(o); return; }
+
   if (!ASPECTS[o.aspect]) { console.error(`不支持的比例：${o.aspect}`); process.exit(2); }
 
   const html = resolve(o.html);
