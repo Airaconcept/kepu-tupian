@@ -43,7 +43,7 @@
 > 把 [PROMPT.md](PROMPT.md) 整段粘贴给任何 AI，它就能按 Anatomy 流程出图，不用读完整文档。
 
 ```bash
-npx skills add Airaconcept/- -g
+npx skills add Airaconcept/kepu-tupian -g
 ```
 
 **5 步出图**：定机器（概念→机械映射）→ 写 `build.mjs` → `node build.mjs` 生成 HTML →
