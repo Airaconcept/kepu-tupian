@@ -9,7 +9,7 @@
 ## 安装（被调用的 AI 先执行）
 
 ```bash
-npx skills add Airaconcept/- -g
+npx skills add Airaconcept/kepu-tupian -g
 ```
 
 需要 Node.js 20.10+，截图校验需要 Chrome/Chromium。
@@ -49,7 +49,6 @@ npx skills add Airaconcept/- -g
 | Threads | 16:9 或 1:1 | 同上 |
 | Facebook | 16:9 或 1:1 | 同上 |
 | 小红书 | 3:4 | render-static 套版 |
-| TikTok / 视频封面 | 9:16 | render-static 竖版套版（图在上，标题说明在下） |
 
 详细尺寸与安全区见 `docs/platforms.md`。
 
