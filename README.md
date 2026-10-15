@@ -38,6 +38,22 @@
 
 ---
 
+## 中文快速上手（一键调用）
+
+> 把 [PROMPT.md](PROMPT.md) 整段粘贴给任何 AI，它就能按 Anatomy 流程出图，不用读完整文档。
+
+```bash
+npx skills add Airaconcept/- -g
+```
+
+**5 步出图**：定机器（概念→机械映射）→ 写 `build.mjs` → `node build.mjs` 生成 HTML →
+`node scripts/capture.mjs` 截图验收 → `node scripts/render-static.mjs` 出多平台图。
+
+- 完整中文示例：[`examples/agent-loop/`](examples/agent-loop/)（"Agent 循环机"，中文注释，照着改就能用）
+- 多平台尺寸（X / IG / Threads / FB / 小红书 / TikTok）：[`docs/platforms.md`](docs/platforms.md)
+
+---
+
 Ask Claude for a figure that explains a technical idea, and Anatomy has it invent a physical thing whose working *is* the concept. A cache key that skips work when nothing changed becomes a pin-tumbler lock that only turns when every pin matches. One GPU context serving many canvases becomes a gantry plotter whose single print head visits 16 wells.
 
 Then Claude builds that thing out of dozens of small, solid, shaded parts, puts it in a framed card with a title, a hint and a live readout, makes it move calmly under the pointer and the keyboard, and checks its own work by zooming in on every joint. Every number the figure shows comes from the same small model that moves its parts.
